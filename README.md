@@ -46,7 +46,7 @@ GCM/
 └── utils.py
 ```
 
-📸 *(Insert an image here of a sample terminal output showing a generated commit message with emojis and summary.)*
+📸 ![](images/004.png)
 
 ---
 
@@ -57,7 +57,8 @@ GCM/
 3. **Review the Suggested Commit:** The AI proposes a message based on your staged or unstaged changes.
 4. **Confirm and Commit:** You have the option to confirm or cancel before the actual commit is made.
 
-📸 *(Insert an image here showing the confirmation prompt with a suggested commit message.)*
+- 📸 With Ollama:
+  ![](images/003.png)
 
 ---
 
@@ -94,7 +95,11 @@ emoji_map:
 - Virtual environments are supported (`.venv`).
 - Creates aliases or shortcuts for seamless execution.
 
-📸 *(Insert an image here of the installation process in a terminal.)*
+- 📸 Part 1/2
+  ![](images/001.png)
+
+- 📸 Part 2/2
+  ![](images/002.png)
 
 ---
 

@@ -1,4 +1,4 @@
-use_ollama: true
+use_ollama: false
 ollama_model: gemma3:27b
 model_tier: cheap
 max_tokens: 600
