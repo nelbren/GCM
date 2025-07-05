@@ -1,0 +1,33 @@
+use_ollama: true
+ollama_model: gemma3:27b
+model_tier: cheap
+max_tokens: 600
+use_confirmation: true
+save_history: true
+history_path: ~/.gcm_history.log
+max_characters: 500
+
+emojis:
+  add: "🆕"
+  change: "📝"
+  delete: "🗑️"
+  info: "ℹ️"
+  summary: "🎯"
+  windows: "🪟"
+  macos: "🍎"
+  linux: "🐧"
+
+prompt_template: |
+  You are an expert software engineer and Git practitioner. Based on the following Git status summary, generate a clear and complete Git commit message with the following structure:
+
+  1. A concise summary line using the Conventional Commits format (e.g., feat:, fix:, chore:, refactor:).
+  2. A detailed description paragraph explaining what was added, changed, or removed and why.
+  3. Optionally, include an explanation or rationale if it helps clarify the purpose of the changes.
+  4. Do not exceed 3 short paragraphs but make sure the message is informative, helpful, and not overly brief.
+  5. Do not use markdown, use plain text.
+
+  Changes:
+  {changes}
+
+  Diff summary:
+  {diff}
