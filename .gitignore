@@ -1,3 +1,4 @@
 __pycache__/
 .venv/
-secret.*
+secret.bat
+secret.bash
