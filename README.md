@@ -112,7 +112,8 @@ emoji_map:
 
 ## 🤖 Example Commit Message Output
 
-📸 *(Insert an image here showing a full commit message with emoji, token stats, and commit number.)*
+📸 With OpenAI:
+![](images/005.png)
 
 ---
 
@@ -124,7 +125,7 @@ Feedback, suggestions, and improvements are welcome. Feel free to open an issue 
 
 ## 🙏 Credits
 
-Developed by **Nelbren** with AI assistance from **Aren 😎** (ChatGPT).\
+Developed by 🧑‍💻 **Nelbren** with 🤖 AI assistance from **Aren 😎** (ChatGPT).\
 Prompt engineering, code generation, emoji madness, and technical fine-tuning powered by **Aren**.
 
 ---
