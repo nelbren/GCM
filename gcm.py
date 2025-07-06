@@ -48,11 +48,12 @@ HISTORY_PATH = os.path.expanduser(
 MAX_CHARACTERS = config.get("max_characters", 160)
 
 EMOJIS = config.get("emojis", {
+    "header": "🔀",
     "add": "🆕",
     "change": "📝",
     "delete": "🗑️",
     "info": "ℹ️",
-    "summary": "🎯",
+    "summary": "🎯"
 })
 
 PROMPT_TEMPLATE = config.get("prompt_template", "")
@@ -182,14 +183,22 @@ def build_commit_message(env, emoji, machine, summary,
     header = f"[💻{machine}{emoji}]"
     padding = " " * (len(header) + 3)
 
-    lines = [f"{header} {summary}"]
+    lines = [f"{header} {EMOJIS.get("header")}: {summary}"]
 
     keywords = {
         "Summary", "insertions", "deletion",
         "Modified", "added", "deleted"
     }
 
+    replacements = {
+        "chore:": "🧹:",
+        "feat:": "✨:",
+    }
+
     for line in suggestion.splitlines():
+        for key, value in replacements.items():
+            if key in line:
+                line = line.replace(key, value)
         if line.strip():
             emoji2 = EMOJIS.get("summary") if any(
                 word in line for word in keywords) else EMOJIS.get("info")
