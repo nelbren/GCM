@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # gcm.py - Git Commit Message Generator
-# version 0002 @ 2025-07-05
 # authors 🧑‍💻Nelbren & 🤖Aren
 
 import os
@@ -183,7 +182,8 @@ def build_commit_message(env, emoji, machine, summary,
     header = f"[💻{machine}{emoji}]"
     padding = " " * (len(header) + 3)
 
-    lines = [f"{header} {EMOJIS.get("header")}: {summary}"]
+    header_emoji = EMOJIS.get("header")
+    lines = [f"{header} {header_emoji}: {summary}"]
 
     keywords = {
         "Summary", "insertions", "deletion",

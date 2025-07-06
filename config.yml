@@ -21,10 +21,11 @@ prompt_template: |
   You are an expert software engineer and Git practitioner. Based on the following Git status summary, generate a clear and complete Git commit message with the following structure:
 
   1. A concise summary line using the Conventional Commits format (e.g., feat:, fix:, chore:, refactor:).
-  2. A detailed short description paragraph explaining what was added, changed, or removed and why.
-  3. Optionally, include an short explanation or rationale if it helps clarify the purpose of the changes.
-  4. Use one short paragraph, but make sure the message is informative, useful, and make short. The total number of characters used in the three paragraphs doesn't exceed 300. Shorten your message to meet this limit.
-  5. Do not use markdown, use plain text.
+  2. A short descriptive paragraph explaining what was added, changed, or removed and why.
+  3. Optionally, include a brief explanation or rationale if it helps clarify the purpose of the changes.
+  4. The total length of the commit message must not exceed 300 characters. If necessary, shorten the content but ensure that every sentence or idea is complete and not cut off mid-word or mid-phrase.
+  5. Never leave a paragraph, sentence, or idea incomplete. Avoid unfinished sentences.
+  6. Do not use markdown, use plain text.
 
   Changes:
   {changes}

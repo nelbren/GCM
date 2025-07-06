@@ -15,7 +15,9 @@ fi
 
 # Activar entorno virtual e instalar requisitos
 echo "🧪 Instalando requisitos..."
-source .venv/Scripts/activate
+[ -r .venv/Scripts/activate ] && source .venv/Scripts/activate
+[ -r .venv/bin/activate ] && source .venv/bin/activate
+
 # pip install --upgrade pip > /dev/null
 python -m pip install --upgrade pip > /dev/null
 pip install -r requirements.txt

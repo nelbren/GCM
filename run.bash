@@ -14,7 +14,8 @@ if [ ! -f "${SCRIPT_DIR}/config.yml" ]; then
 fi
 
 # Verifica entorno virtual
-if [ ! -f "${SCRIPT_DIR}/.venv/Scripts/python" ]; then
+if [ ! -f "${SCRIPT_DIR}/.venv/Scripts/python" -a \
+     ! -f "${SCRIPT_DIR}/.venv/bin/python" ]; then
     echo "❌ Entorno virtual no encontrado. Ejecuta install.bash primero."
     exit 1
 fi
@@ -36,5 +37,9 @@ source ${SCRIPT_DIR}/secret.bash
 if [ "$OSTYPE" == "cygwin" ]; then
     "$WIN_SCRIPT_DIR/.venv/Scripts/python.exe" "$WIN_SCRIPT_DIR/gcm.py" "$@"
 else
-    ${SCRIPT_DIR}/.venv/Scripts/python.exe "${SCRIPT_DIR}/gcm.py" "$@"
+    if [ -r .venv/Scripts/python ]; then
+        ${SCRIPT_DIR}/.venv/Scripts/python "${SCRIPT_DIR}/gcm.py" "$@"
+    else
+        ${SCRIPT_DIR}/.venv/bin/python "${SCRIPT_DIR}/gcm.py" "$@"
+    fi
 fi
