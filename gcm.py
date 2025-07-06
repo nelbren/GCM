@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # gcm.py - Git Commit Message Generator
-# By 🧑‍💻Nelbren & 🤖Aren
+# version 0002 @ 2025-07-05
+# authors 🧑‍💻Nelbren & 🤖Aren
 
 import os
 import sys
@@ -25,7 +26,8 @@ def load_config(path=None):
 
 config = load_config()
 
-USE_OLLAMA = config.get("use_ollama", False)
+USE_OLLAMA = os.getenv("USE_OLLAMA", "True")
+USE_OLLAMA = True if USE_OLLAMA == "True" else False
 OLLAMA_MODEL = config.get("ollama_model", "llama3")
 MODEL_TIER = config.get("model_tier", "cheap")
 
@@ -136,6 +138,11 @@ def build_prompt(changes, diff_summary=""):
 def query_model(prompt):
     usage = None
     start_time = time.time()
+
+    model_name = OLLAMA_MODEL if USE_OLLAMA else OPENAI_MODEL
+    provider = "Ollama" if USE_OLLAMA else "OpenAI"
+
+    print(f"🔍 Consulting 🤖 {provider} 🧠 {model_name}...\n")
 
     if USE_OLLAMA:
         import requests
