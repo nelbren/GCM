@@ -36,6 +36,19 @@ GCM (Git Commit Message Generator) is a cross-platform tool designed to help dev
 
 ```plaintext
 GCM/
+├── apis/
+│   ├── OpenRouter/
+│   │   ├── query_model.py
+│   │   ├── secret.bash
+│   │   └── secret.bat
+│   ├── OpenAI/
+│   │   ├── query_model.py
+│   │   ├── secret.bash
+│   │   └── secret.bat
+│   └── Ollama/
+│       ├── query_model.py
+│       ├── secret.bash
+│       └── secret.bat
 ├── gcm.py
 ├── gcm.bat
 ├── install.bat
@@ -44,6 +57,8 @@ GCM/
 ├── run.bash
 ├── config.yml
 ├── requirements.txt
+├── secret.bash
+├── secret.bat
 └── utils.py
 ```
 
@@ -66,26 +81,41 @@ GCM/
 ## 🔑 Configuration (config.yml example)
 
 ```yaml
-use_ollama: false
-ollama_model: llama3
+ollama_model: gemma3:27b
 model_tier: cheap
-max_characters: 500
-prompt_template: |
-  You are an expert software engineer and Git practitioner...
-history_path: ~/.gcm_history.log
-save_history: true
+max_tokens: 600
 use_confirmation: true
-emoji_map:
+save_history: true
+history_path: ~/.gcm_history.log
+max_characters: 500
+suggested_messages: 3
+
+emojis:
+  header: "🔀"
   add: "🆕"
   change: "📝"
   delete: "🗑️"
   info: "ℹ️"
   summary: "🎯"
-  os:
-    windows: "🪟"
-    macos: "🍎"
-    linux: "🐧"
-    cygwin: "🪟"
+  windows: "🪟"
+  macos: "🍎"
+  linux: "🐧"
+
+prompt_template: |
+  You are an expert software engineer and Git practitioner. Based on the following Git status summary, generate a clear and complete Git commit message with the following structure:
+
+  1. A concise summary line using the Conventional Commits format (e.g., feat:, fix:, chore:, refactor:).
+  2. A short descriptive paragraph explaining what was added, changed, or removed and why.
+  3. Optionally, include a brief explanation or rationale if it helps clarify the purpose of the changes.
+  4. The total length of the commit message must not exceed 300 characters. If necessary, shorten the content but ensure that every sentence or idea is complete and not cut off mid-word or mid-phrase.
+  5. Never leave a paragraph, sentence, or idea incomplete. Avoid unfinished sentences.
+  6. Do not use markdown, use plain text.
+
+  Changes:
+  {changes}
+
+  Diff summary:
+  {diff}
 ```
 
 ---
@@ -108,6 +138,7 @@ emoji_map:
 
 - **OpenAI:** gpt-3.5-turbo, gpt-4o, or configurable models.
 - **Ollama:** llama3, gemma, or any local model served by Ollama.
+- **OpenRouter:** any free models.
 
 ---
 
@@ -115,6 +146,13 @@ emoji_map:
 
 📸 With OpenAI:
 ![](images/005.png)
+
+---
+
+## 🔁 Round-robin and OpenRouter support
+
+📸 With suggested_messages: 3
+![](images/006.png)
 
 ---
 

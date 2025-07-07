@@ -161,6 +161,7 @@ def build_commit_message(env, emoji, machine, summary,
         "chore:": "🧹:",
         "feat:": "✨:",
         "fix:": "🛠️:",
+        "docs:": "📄"
     }
 
     for line in suggestion.splitlines():
@@ -235,14 +236,12 @@ if __name__ == "__main__":
             provider, query_fn = "OpenRouter", query_openrouter
 
         code, model, response, usage, elapsed = query_fn(prompt)
-
-        content = response[:MAX_CHARACTERS] if MAX_CHARACTERS else response
-
-        message = build_commit_message(
-            env, emoji, machine_name, summary, content, diff_summary
-        )
-
-        messages.append((provider, model, message, usage, elapsed))
+        if code == 200:
+            content = response[:MAX_CHARACTERS] if MAX_CHARACTERS else response
+            message = build_commit_message(
+                env, emoji, machine_name, summary, content, diff_summary
+            )
+            messages.append((provider, model, message, usage, elapsed))
 
     print("\n📝 Suggested Commit Message:\n")
     for idx, (provider, model, msg, usage, elapsed) in enumerate(messages, 1):
