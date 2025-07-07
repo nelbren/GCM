@@ -5,6 +5,7 @@ use_confirmation: true
 save_history: true
 history_path: ~/.gcm_history.log
 max_characters: 500
+suggested_messages: 3
 
 emojis:
   header: "🔀"

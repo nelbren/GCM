@@ -5,14 +5,28 @@
 import os
 import sys
 import yaml
-import time
 import shutil
 import socket
 import subprocess
-from openai import OpenAI
 from datetime import datetime
 from utils import detect_environment, ENVIRONMENT_EMOJI, \
                   format_usage, get_cost, get_commit_count
+
+from apis.OpenRouter.query_model import query_model as query_openrouter
+from apis.OpenAI.query_model import query_model as query_openai
+from apis.Ollama.query_model import query_model as query_ollama
+
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OLLAMA_API_KEY = os.getenv("OLLAMA_API_KEY")
+
+available_apis = []
+if OPENROUTER_API_KEY:
+    available_apis.append(("OpenRouter", query_openrouter))
+if OPENAI_API_KEY:
+    available_apis.append(("OpenAI", query_openai))
+if OLLAMA_API_KEY:
+    available_apis.append(("Ollama", query_ollama))
 
 
 def load_config(path=None):
@@ -28,14 +42,8 @@ config = load_config()
 USE_OLLAMA = os.getenv("USE_OLLAMA", "True")
 USE_OLLAMA = True if USE_OLLAMA == "True" else False
 OLLAMA_MODEL = config.get("ollama_model", "llama3")
-MODEL_TIER = config.get("model_tier", "cheap")
+MODEL_TIER = os.getenv("MODEL_TIER", "cheap")
 
-if MODEL_TIER == "cheap":
-    OPENAI_MODEL = "gpt-3.5-turbo"
-elif MODEL_TIER == "premium":
-    OPENAI_MODEL = "gpt-4o"
-else:
-    OPENAI_MODEL = config.get("openai_model", "gpt-3.5-turbo")
 MAX_TOKENS = config.get("max_tokens", 400)
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -45,6 +53,7 @@ HISTORY_PATH = os.path.expanduser(
     config.get("history_path", "~/.gcm_history.log")
 )
 MAX_CHARACTERS = config.get("max_characters", 160)
+SUGGESTED_MESSAGES = config.get("suggested_messages", 1)
 
 EMOJIS = config.get("emojis", {
     "header": "🔀",
@@ -135,48 +144,6 @@ def build_prompt(changes, diff_summary=""):
     return prompt_filled
 
 
-def query_model(prompt):
-    usage = None
-    start_time = time.time()
-
-    model_name = OLLAMA_MODEL if USE_OLLAMA else OPENAI_MODEL
-    provider = "Ollama" if USE_OLLAMA else "OpenAI"
-
-    print(f"🔍 Consulting 🤖 {provider} 🧠 {model_name}...\n")
-
-    if USE_OLLAMA:
-        import requests
-
-        response = requests.post(
-            "http://localhost:11434/api/generate",
-            json={
-                "model": OLLAMA_MODEL,
-                "prompt": prompt,
-                "stream": False
-            }
-        )
-        content = response.json()["response"].strip()
-    else:
-        client = OpenAI(api_key=OPENAI_API_KEY)
-        response = client.chat.completions.create(
-            model=OPENAI_MODEL,
-            messages=[
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=400
-        )
-        content = response.choices[0].message.content.strip()
-        usage = {
-            "prompt_tokens": response.usage.prompt_tokens,
-            "completion_tokens": response.usage.completion_tokens,
-            "total_tokens": response.usage.total_tokens
-        }
-
-    elapsed_time = time.time() - start_time
-    final_content = content[:MAX_CHARACTERS] if MAX_CHARACTERS else content
-    return final_content, usage, elapsed_time
-
-
 def build_commit_message(env, emoji, machine, summary,
                          suggestion, diff_summary=""):
     header = f"[💻{machine}{emoji}]"
@@ -258,35 +225,54 @@ if __name__ == "__main__":
     )
 
     prompt = build_prompt(changes, diff_summary)
-    ai_suggestion, usage, elapsed_time = query_model(prompt)
 
-    message = build_commit_message(
-        env, emoji, machine_name, summary, ai_suggestion, diff_summary
-    )
+    messages = []
+
+    for i in range(SUGGESTED_MESSAGES):
+        provider, query_fn = available_apis[i % len(available_apis)]
+        if provider != "OpenRouter" and i >= len(available_apis):
+            provider, query_fn = "OpenRouter", query_openrouter
+
+        code, model, response, usage, elapsed = query_fn(prompt)
+
+        content = response[:MAX_CHARACTERS] if MAX_CHARACTERS else response
+
+        message = build_commit_message(
+            env, emoji, machine_name, summary, content, diff_summary
+        )
+
+        messages.append((provider, model, message, usage, elapsed))
+
+    # ai_suggestion, usage, elapsed_time = query_model(prompt)
 
     print("\n📝 Suggested Commit Message:\n")
-    print("-" * columns)
-    print(message)
-    print("-" * columns)
+    for idx, (provider, model, msg, usage, elapsed) in enumerate(messages, 1):
+        print(f"#{idx}: 🤖 {provider} 🧠 {model} | ", end="")
+        print(f"⏱️ Elapsed time: {elapsed:.2f} seconds")
+        print("-" * columns)
+        print(msg)
+        if usage:
+            print("-" * columns)
+            print(format_usage(usage))
+        print("=" * columns)
 
-    cost = get_cost(USE_OLLAMA, MODEL_TIER)
-
-    if USE_OLLAMA:
-        print(f"🤖 Ollama 🧠 {OLLAMA_MODEL} ({cost})")
-    else:
-        print(f"🤖 OpenAI 🧠 {OPENAI_MODEL} ({cost})")
-
-    if usage:
-        print(format_usage(usage))
-
-    print(f"⏱️ Elapsed time: {elapsed_time:.2f} seconds\n")
+    # cost = get_cost(USE_OLLAMA, MODEL_TIER)
+    #    print(f"🤖 Ollama 🧠 {OLLAMA_MODEL} ({cost})")
 
     if USE_CONFIRM:
+        options = len(messages)
         confirm = input(
-            "\n✅ Do you want to use this message to commit? (y/N): "
-        ).strip().lower()
+            f"\n✅ Do you want to use this message to commit? (1~{options}/0): "
+        ).strip()
 
-        if confirm != "y":
+        try:
+            val = int(confirm)
+        except ValueError:
+            val = 0
+
+        if val >= 1 and val <= options:
+            print(f"DO SOMETHING WITH {val}")
+        if val == "0":
             print("🚫 Commit canceled by user.")
             sys.exit(0)
 

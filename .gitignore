@@ -2,3 +2,9 @@ __pycache__/
 .venv/
 secret.bat
 secret.bash
+apis/OpenRouter/secret.bat
+apis/OpenRouter/secret.bash
+apis/OpenAI/secret.bat
+apis/OpenAI/secret.bash
+apis/Ollama/secret.bat
+apis/Ollama/secret.bash
