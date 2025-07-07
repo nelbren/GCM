@@ -50,17 +50,22 @@ def query_model(prompt):
 
     provider = "OpenAI"
     print(f"🔍 Consulting 🤖 {provider} 🧠 {model}...\n")
-
+    code = None
     client = OpenAI(api_key=OPENAI_API_KEY)
-    response = client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "user", "content": prompt}
-        ],
-        max_tokens=400
-    )
+    try:
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=400
+        )
+        code = 200
+    except client.error.OpenAIError as e:
+        code = getattr(e, 'http_status', 500)
+        return code, None, str(e), None, 0
+
     elapsed_time = time.time() - start_time
-    code = response.status_code
 
     if DEBUG:
         data = response.json()

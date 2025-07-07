@@ -10,7 +10,7 @@ import socket
 import subprocess
 from datetime import datetime
 from utils import detect_environment, ENVIRONMENT_EMOJI, \
-                  format_usage, get_cost, get_commit_count
+                  format_usage, get_commit_count
 
 from apis.OpenRouter.query_model import query_model as query_openrouter
 from apis.OpenAI.query_model import query_model as query_openai
@@ -160,6 +160,7 @@ def build_commit_message(env, emoji, machine, summary,
     replacements = {
         "chore:": "🧹:",
         "feat:": "✨:",
+        "fix:": "🛠️:",
     }
 
     for line in suggestion.splitlines():
@@ -243,8 +244,6 @@ if __name__ == "__main__":
 
         messages.append((provider, model, message, usage, elapsed))
 
-    # ai_suggestion, usage, elapsed_time = query_model(prompt)
-
     print("\n📝 Suggested Commit Message:\n")
     for idx, (provider, model, msg, usage, elapsed) in enumerate(messages, 1):
         print(f"#{idx}: 🤖 {provider} 🧠 {model} | ", end="")
@@ -261,20 +260,23 @@ if __name__ == "__main__":
 
     if USE_CONFIRM:
         options = len(messages)
-        confirm = input(
-            f"\n✅ Do you want to use this message to commit? (1~{options}/0): "
-        ).strip()
+        while True:
+            confirm = input(
+                f"\n✅ Do you want to use any of these messages "
+                f"(1~{options}) to commit? (1~{options}/0): "
+            ).strip()
 
-        try:
-            val = int(confirm)
-        except ValueError:
-            val = 0
+            try:
+                val = int(confirm)
+            except ValueError:
+                val = -1
 
-        if val >= 1 and val <= options:
-            print(f"DO SOMETHING WITH {val}")
-        if val == "0":
-            print("🚫 Commit canceled by user.")
-            sys.exit(0)
+            if val >= 1 and val <= options:
+                message = messages[val - 1][2]
+                break
+            if val == 0:
+                print("🚫 Commit canceled by user.")
+                sys.exit(0)
 
     if not has_staged_changes():
         print("ℹ️ No changes staged. Running: git add .")

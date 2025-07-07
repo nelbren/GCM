@@ -37,6 +37,7 @@ GCM (Git Commit Message Generator) is a cross-platform tool designed to help dev
 ```plaintext
 GCM/
 ├── gcm.py
+├── gcm.bat
 ├── install.bat
 ├── install.bash
 ├── run.bat
