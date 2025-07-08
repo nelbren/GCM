@@ -1,3 +1,3 @@
 @echo off
 call secret.bat
-python query_model.py list
+..\..\.venv\Scripts\python query_model.py list

@@ -250,7 +250,8 @@ if __name__ == "__main__":
     print("\n📝 Suggested Commit Message:\n")
     for idx, (provider, model, msg, usage, elapsed) in enumerate(messages, 1):
         print(f"#{idx}: 🤖 {provider} 🧠 {model} | ", end="")
-        print(f"⏱️ Elapsed time: {elapsed:.2f} seconds")
+        fix = " " if env == "MACOS" else ""
+        print(f"⏱️{fix} Elapsed time: {elapsed:.2f} seconds")
         print("-" * columns)
         print(msg)
         if usage:

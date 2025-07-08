@@ -5,6 +5,9 @@ import time
 import random
 import requests
 
+sys.path.append('../..')
+from utils import detect_environment
+
 
 DEBUG = os.getenv("DEBUG", "False")
 DEBUG = True if DEBUG == "True" else False
@@ -83,7 +86,7 @@ def query_model(prompt):
 
     provider = "OpenRouter"
     model = model.strip()
-    print(f"🔍 Consulting 🤖 {provider} 🧠 {model}...", end='')
+    print(f"🔍 Consulting 🤖 {provider} 🧠 {model}...", end='', flush=True)
 
     response = requests.post(
         url="https://openrouter.ai/api/v1/chat/completions",
@@ -153,10 +156,12 @@ if __name__ == "__main__":
         for model in free_models:
             print(model)
         exit(0)
+    env, emoji = detect_environment()
     prompt = "What is the meaning of life?"
     code, model, content, usage, elapsed_time = query_model(prompt)
     print(f"🌐 Code: {code}")
     print(f"🧠 Model: {model}")
     print(f"💬 Response: {content}")
     print(f"📊 Usage: {usage}")
-    print(f"⏱️  Elapsed time: {elapsed_time:.2f} seconds")
+    fix = " " if env == "MACOS" else ""
+    print(f"⏱️{fix} Elapsed time: {elapsed_time:.2f} seconds")

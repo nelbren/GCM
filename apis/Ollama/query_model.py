@@ -5,6 +5,9 @@ import json
 import random
 import requests
 
+sys.path.append('../..')
+from utils import detect_environment
+
 DEBUG = os.getenv("DEBUG", "False")
 DEBUG = True if DEBUG == "True" else False
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "")
@@ -42,7 +45,7 @@ def query_model(prompt):
 
     provider = "Ollama"
     model = model.strip()
-    print(f"🔍 Consulting 🤖 {provider} 🧠 {model}...", end='')
+    print(f"🔍 Consulting 🤖 {provider} 🧠 {model}...", end='', flush=True)
     response = None
     error = None
     code = 666
@@ -98,10 +101,12 @@ if __name__ == "__main__":
         for model in models:
             print(model)
         exit(0)
+    env, emoji = detect_environment()
     prompt = "What is the meaning of life?"
     code, model, content, usage, elapsed_time = query_model(prompt)
     print(f"🌐 Code: {code}")
     print(f"🧠 Model: {model}")
     print(f"💬 Response: {content}")
     print(f"📊 Usage: {usage}")
-    print(f"⏱️  Elapsed time: {elapsed_time:.2f} seconds")
+    fix = " " if env == "MACOS" else ""
+    print(f"⏱️{fix} Elapsed time: {elapsed_time:.2f} seconds")
