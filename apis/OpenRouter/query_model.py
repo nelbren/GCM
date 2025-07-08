@@ -195,6 +195,8 @@ def query_model(prompt):
         # print("models_to_use -> ", models_to_use)
         model = random.choice(models_to_use)
         # print("model ->", model)
+    else:
+        models_to_use = [model]
 
     # model = model.strip()
     return query_with_fallback(models_to_use, prompt)

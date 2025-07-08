@@ -288,7 +288,8 @@ if __name__ == "__main__":
         # print(f"#{idx}: 🤖 {provider} 🧠 {model} | ", end="")
         # print("-" * columns)
         strIdx = str(idx)
-        print(f"[ {strIdx} ]{"-" * (columns - len(strIdx) - 4)}")
+        cols = columns - len(strIdx) - 4
+        print(f"[ {strIdx} ]{'-' * cols}")
         print(msg)
         if usage:
             print("-" * columns)
