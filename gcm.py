@@ -11,6 +11,7 @@ import subprocess
 from datetime import datetime
 from utils import detect_environment, ENVIRONMENT_EMOJI, \
                   format_usage, get_commit_count
+from version import load_version_config, update_version_file
 
 from apis.OpenRouter.query_model import query_model as query_openrouter
 from apis.OpenAI.query_model import query_model as query_openai
@@ -38,6 +39,9 @@ def load_config(path=None):
 
 
 config = load_config()
+version_config = load_version_config()
+# print(version_config)
+# exit(1)
 
 USE_OLLAMA = os.getenv("USE_OLLAMA", "True")
 USE_OLLAMA = True if USE_OLLAMA == "True" else False
@@ -145,7 +149,8 @@ def build_prompt(changes, diff_summary=""):
 
 
 def build_commit_message(env, emoji, machine, summary,
-                         suggestion, diff_summary=""):
+                         suggestion, diff_summary,
+                         provider, model, elapsed):
     header = f"[💻{machine}{emoji}]"
     padding = " " * (len(header) + 3)
 
@@ -179,10 +184,13 @@ def build_commit_message(env, emoji, machine, summary,
                 lines.append(f"{padding}{EMOJIS.get('summary')}: {line}")
 
     commit_count = get_commit_count() + 1
-    commit_number_str = f"{commit_count:07,}"
+    commit_number_str = f"{commit_count:011,}"
     timestamp_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
     commit_id_line = f"🆔: {commit_number_str} | 🕒: {timestamp_str} " + \
-                     f"| {ENVIRONMENT_EMOJI}: {env}"
+                     f"| {ENVIRONMENT_EMOJI}: {env} " \
+                     f"| 🤖: {provider} 🧠: {model} " \
+                     f"| ⏱️: {elapsed:.2f} secs"
+
     lines.append(f"{padding}{commit_id_line}")
 
     return "\n".join(lines)
@@ -211,16 +219,18 @@ if __name__ == "__main__":
         sys.exit(1)
 
     env, emoji = detect_environment()
-
     machine_name = get_machine_name()
-    changes = classify_changes(get_git_changes())
 
+    version = update_version_file(version_config)
+    if version:
+        print(f"🔖 Version: {version}")
+
+    changes = classify_changes(get_git_changes())
     if not any(changes.values()):
         print("ℹ️ No changes detected. Nothing to do.")
         sys.exit(0)
 
     diff_summary = get_git_diff_summary()
-
     summary = "; ".join(
         f"{EMOJIS.get(key.lower(), '')}: {format_file_list(v)}"
         for key, v in changes.items() if v
@@ -229,19 +239,42 @@ if __name__ == "__main__":
     prompt = build_prompt(changes, diff_summary)
 
     messages = []
+    used_models = set()  # Here we keep track of the control in memory
 
     for i in range(SUGGESTED_MESSAGES):
         provider, query_fn = available_apis[i % len(available_apis)]
+
+        # Force OpenRouter if there are fewer
+        # providers than suggestions requested
         if provider != "OpenRouter" and i >= len(available_apis):
             provider, query_fn = "OpenRouter", query_openrouter
 
-        code, model, response, usage, elapsed = query_fn(prompt)
-        if code == 200:
-            content = response[:MAX_CHARACTERS] if MAX_CHARACTERS else response
-            message = build_commit_message(
-                env, emoji, machine_name, summary, content, diff_summary
-            )
-            messages.append((provider, model, message, usage, elapsed))
+        attempt = 0
+        max_attempts = 5  # Avoid infinite loop in extreme cases
+
+        while attempt < max_attempts:
+            code, model, response, usage, elapsed = query_fn(prompt)
+            unique_key = f"{provider}:{model}"
+
+            if unique_key in used_models:
+                attempt += 1
+                # This template has already been used, try another one
+                continue
+
+            used_models.add(unique_key)
+
+            if code == 200:
+                content = response[:MAX_CHARACTERS] \
+                    if MAX_CHARACTERS else response
+                message = build_commit_message(
+                    env, emoji, machine_name, summary,
+                    content, diff_summary,
+                    provider, model, elapsed
+                )
+                messages.append((provider, model, message, usage, elapsed))
+                break  # Success: exit the while
+
+            attempt += 1  # If it failed, try another
 
     if len(messages) == 0:
         print("\n⚠️ There are no suggested confirmation messages!\n")
@@ -249,10 +282,13 @@ if __name__ == "__main__":
 
     print("\n📝 Suggested Commit Message:\n")
     for idx, (provider, model, msg, usage, elapsed) in enumerate(messages, 1):
-        print(f"#{idx}: 🤖 {provider} 🧠 {model} | ", end="")
-        fix = " " if env == "MACOS" else ""
-        print(f"⏱️{fix} Elapsed time: {elapsed:.2f} seconds")
-        print("-" * columns)
+        # print(f"#{idx}: 🤖 {provider} 🧠 {model} | ", end="")
+        # fix = " " if env == "MACOS" else ""
+        # print(f"⏱️{fix} Elapsed time: {elapsed:.2f} seconds")
+        # print(f"#{idx}: 🤖 {provider} 🧠 {model} | ", end="")
+        # print("-" * columns)
+        strIdx = str(idx)
+        print(f"[ {strIdx} ]{"-" * (columns - len(strIdx) - 4)}")
         print(msg)
         if usage:
             print("-" * columns)
@@ -267,7 +303,7 @@ if __name__ == "__main__":
         while True:
             confirm = input(
                 f"\n✅ Do you want to use any of these messages "
-                f"(1~{options}) to commit? (1~{options}/0): "
+                f"(1~{options}) to commit? (1~{options}/0=Cancel): "
             ).strip()
 
             try:

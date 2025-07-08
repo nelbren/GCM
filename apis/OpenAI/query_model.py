@@ -18,8 +18,6 @@ OPENAI_API_KEY = OPENAI_API_KEY.strip()
 
 
 def list_models():
-    print("List models:")
-    print("------------")
     code = None
     models = []
     try:
@@ -113,6 +111,8 @@ if __name__ == "__main__":
     argv = sys.argv[1:]
     if len(argv) > 0 and argv[0] == "list":
         models = list_models()
+        print("List models:")
+        print("------------")
         for model in models:
             print(model)
         exit(0)

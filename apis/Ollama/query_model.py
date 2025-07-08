@@ -16,8 +16,6 @@ OLLAMA_API_KEY = OLLAMA_API_KEY.strip()
 
 
 def list_models():
-    print("List models:")
-    print("------------")
     models = []
     response = requests.get("http://localhost:11434/api/tags")
 
@@ -98,6 +96,8 @@ if __name__ == "__main__":
     argv = sys.argv[1:]
     if len(argv) > 0 and argv[0] == "list":
         models = list_models()
+        print("List models:")
+        print("------------")
         for model in models:
             print(model)
         exit(0)
