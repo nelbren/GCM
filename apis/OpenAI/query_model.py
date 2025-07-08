@@ -9,30 +9,45 @@ from openai import OpenAI
 DEBUG = os.getenv("DEBUG", "False")
 DEBUG = True if DEBUG == "True" else False
 MODEL_TIER = os.getenv("MODEL_TIER", "cheap")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+OPENAI_API_KEY = OPENAI_API_KEY.strip()
 
 
 def list_models():
+    print("List models:")
+    print("------------")
+    code = None
     models = []
-    response = requests.get(
-        "https://api.openai.com/v1/models",
-        headers={
-            "Authorization": f"Bearer {OPENAI_API_KEY}"
-        }
-    )
+    try:
+        response = requests.get(
+            "https://api.openai.com/v1/models",
+            headers={
+                "Authorization": f"Bearer {OPENAI_API_KEY}"
+            }
+        )
+        data = response.json()
+        code = response.status_code
+    except requests.exceptions.HTTPError as e:
+        code = response.status_code
+        error = f"Error HTTP: {e.response.status_code}"
 
-    if response.status_code == 200:
+    if code == 200:
         models_availables = response.json().get("data", [])
         for m in models_availables:
             models.append(m["id"])
     else:
-        print(f"❌ Error: {response.status_code}")
-        print(response.text)
+        if "error" in data:
+            error = data["error"]["message"]
+        print(f"❌ ({code}: {error}")
+        if DEBUG:
+            print(response.text)
 
     return models
 
 
 def query_model(prompt):
+    if not OPENAI_API_KEY:
+        return 0, None, None, None, 0
     usage = None
     start_time = time.time()
 
@@ -49,7 +64,8 @@ def query_model(prompt):
         model = random.choice(models)
 
     provider = "OpenAI"
-    print(f"🔍 Consulting 🤖 {provider} 🧠 {model}...\n")
+    model = model.strip()
+    print(f"🔍 Consulting 🤖 {provider} 🧠 {model}...", end='')
     code = None
     client = OpenAI(api_key=OPENAI_API_KEY)
     try:
@@ -79,9 +95,12 @@ def query_model(prompt):
     }
 
     if code != 200:
+        print(f"❌ {code})")
         if DEBUG:
             print(response.status_code)
         return code, model, response, usage, elapsed_time
+    else:
+        print("✅")
 
     return code, model, content, usage, elapsed_time
 
@@ -99,4 +118,4 @@ if __name__ == "__main__":
     print(f"🧠 Model: {model}")
     print(f"💬 Response: {content}")
     print(f"📊 Usage: {usage}")
-    print(f"⏱️ Elapsed time: {elapsed_time:.2f} seconds")
+    print(f"⏱️  Elapsed time: {elapsed_time:.2f} seconds")

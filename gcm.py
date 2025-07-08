@@ -243,6 +243,10 @@ if __name__ == "__main__":
             )
             messages.append((provider, model, message, usage, elapsed))
 
+    if len(messages) == 0:
+        print("\n⚠️ There are no suggested confirmation messages!\n")
+        exit(1)
+
     print("\n📝 Suggested Commit Message:\n")
     for idx, (provider, model, msg, usage, elapsed) in enumerate(messages, 1):
         print(f"#{idx}: 🤖 {provider} 🧠 {model} | ", end="")

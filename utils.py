@@ -1,6 +1,7 @@
 # utils.py - Librería compartida para GCM
 
 import os
+import sys
 import platform
 import subprocess
 
@@ -80,6 +81,11 @@ def get_commit_count():
         return count
     except Exception:
         return 0
+
+
+def print_inline(message):
+    sys.stdout.write(message)
+    sys.stdout.flush()
 
 
 if __name__ == "__main__":

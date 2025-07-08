@@ -24,14 +24,22 @@ fi
 export MSYSTEM
 export OSTYPE
 
-# Verifica existencia de secret.bash
-if [ ! -f "${SCRIPT_DIR}/secret.bash" ]; then
-    echo "❌ ${SCRIPT_DIR}/secret,bash no encontrado. Aborta."
-    exit 1
-fi
+BASE_DIR="${SCRIPT_DIR}/apis"
 
-# Fijar la Key
-source ${SCRIPT_DIR}/secret.bash
+for dir in "$BASE_DIR"/*/; do
+    SECRET_FILE="${dir}secret.bash"
+
+    if [ ! -f "$SECRET_FILE" ]; then
+        echo "❌ $SECRET_FILE not found. Abort."
+        echo "👉 cp $SECRET_FILE.example $SECRET_FILE"
+        exit 1
+    fi
+
+    # Fijar la Key
+    source "$SECRET_FILE"
+done
+
+# echo $OPENROUTER_MODEL
 
 # Ejecuta el script usando el entorno virtual
 if [ "$OSTYPE" == "cygwin" ]; then

@@ -26,7 +26,8 @@ if not exist %SCRIPT_DIR%secret.bat (
     echo ❌ %SCRIPT_DIR%secret.bat no encontrado. Aborta.
     exit /b 1
 )
-REM Fijar la Key
+
+REM Fijar la Keys
 call %SCRIPT_DIR%secret.bat
 
 REM Ejecutar GCM con entorno virtual

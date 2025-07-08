@@ -8,10 +8,13 @@ import requests
 DEBUG = os.getenv("DEBUG", "False")
 DEBUG = True if DEBUG == "True" else False
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "")
-OLLAMA_API_KEY = os.getenv("OPENAI_API_KEY")
+OLLAMA_API_KEY = os.getenv("OLLAMA_API_KEY", "")
+OLLAMA_API_KEY = OLLAMA_API_KEY.strip()
 
 
 def list_models():
+    print("List models:")
+    print("------------")
     models = []
     response = requests.get("http://localhost:11434/api/tags")
 
@@ -27,6 +30,8 @@ def list_models():
 
 
 def query_model(prompt):
+    if not OLLAMA_API_KEY:
+        return 0, None, None, None, 0
     usage = None
     start_time = time.time()
 
@@ -36,30 +41,52 @@ def query_model(prompt):
         model = random.choice(models)
 
     provider = "Ollama"
-    print(f"🔍 Consulting 🤖 {provider} 🧠 {model}...\n")
+    model = model.strip()
+    print(f"🔍 Consulting 🤖 {provider} 🧠 {model}...", end='')
+    response = None
+    error = None
+    code = 666
+    try:
+        response = requests.post(
+            "http://localhost:11434/api/generate",
+            json={
+                "model": model,
+                "prompt": prompt,
+                "stream": False
+            }
+        )
+        data = response.json()
+        content = response.json()["response"].strip()
+        code = response.status_code
+        error = ""
+    except requests.exceptions.ConnectionError:
+        error = "Ollama is not running or cannot connect."
 
-    response = requests.post(
-        "http://localhost:11434/api/generate",
-        json={
-            "model": model,
-            "prompt": prompt,
-            "stream": False
-        }
-    )
+    except requests.exceptions.Timeout:
+        error = "Timeout occurred while trying to contact Ollama."
+
+    except requests.exceptions.HTTPError as e:
+        error = f"Error HTTP: {e.response.status_code}"
+
+    except requests.exceptions.RequestException as e:
+        error = f"Error inesperado: {e}"
+
+    except KeyError:
+        if "error" in data:
+            error = data["error"]
 
     if DEBUG:
-        data = response.json()
         print(json.dumps(data, indent=4))
 
-    content = response.json()["response"].strip()
-
     elapsed_time = time.time() - start_time
-    code = response.status_code
 
     if code != 200:
+        print(f"❌ ({code}: {error})")
         if DEBUG:
             print(response.status_code)
         return code, model, response, usage, elapsed_time
+    else:
+        print("✅")
 
     return code, model, content, usage, elapsed_time
 
@@ -77,4 +104,4 @@ if __name__ == "__main__":
     print(f"🧠 Model: {model}")
     print(f"💬 Response: {content}")
     print(f"📊 Usage: {usage}")
-    print(f"⏱️ Elapsed time: {elapsed_time:.2f} seconds")
+    print(f"⏱️  Elapsed time: {elapsed_time:.2f} seconds")

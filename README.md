@@ -57,8 +57,6 @@ GCM/
 ├── run.bash
 ├── config.yml
 ├── requirements.txt
-├── secret.bash
-├── secret.bat
 └── utils.py
 ```
 

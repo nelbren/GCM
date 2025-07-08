@@ -5,13 +5,17 @@ import time
 import random
 import requests
 
+
 DEBUG = os.getenv("DEBUG", "False")
 DEBUG = True if DEBUG == "True" else False
 OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "FreeAll")
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+OPENROUTER_API_KEY = OPENROUTER_API_KEY.strip()
 
 
 def list_free_models(selection="FreeAll"):
+    print("Free models:")
+    print("------------")
     # free_models = []
     r = requests.get(
         "https://openrouter.ai/api/v1/models",
@@ -33,7 +37,7 @@ def list_free_models(selection="FreeAll"):
         return []
 
     if DEBUG:
-        print(f"🔍 Modelos gratuitos encontrados: {len(free)}")
+        print(f"🔍 Free models found: {len(free)}")
 
     # Preparar la lista de modelos con datos relevantes
     detailed_models = []
@@ -65,6 +69,8 @@ def list_free_models(selection="FreeAll"):
 
 
 def query_model(prompt):
+    if not OPENROUTER_API_KEY:
+        return 0, None, None, None, 0
     usage = None
     start_time = time.time()
 
@@ -76,7 +82,8 @@ def query_model(prompt):
         model = random.choice(models_to_use)
 
     provider = "OpenRouter"
-    print(f"🔍 Consulting 🤖 {provider} 🧠 {model}...\n")
+    model = model.strip()
+    print(f"🔍 Consulting 🤖 {provider} 🧠 {model}...", end='')
 
     response = requests.post(
         url="https://openrouter.ai/api/v1/chat/completions",
@@ -100,11 +107,18 @@ def query_model(prompt):
 
     if DEBUG:
         print(json.dumps(data, indent=4))
+        print(type(data))
 
     if code != 200:
+        error = None
+        if "error" in data:
+            error = data["error"]["message"]
+        print(f"❌ ({code}: {error})")
         if DEBUG:
-            print(response.status_code)
+            print(code)
         return code, model, response, usage, elapsed_time
+    else:
+        print("✅")
 
     usage_data = data.get("usage", {})
     usage = {
@@ -145,4 +159,4 @@ if __name__ == "__main__":
     print(f"🧠 Model: {model}")
     print(f"💬 Response: {content}")
     print(f"📊 Usage: {usage}")
-    print(f"⏱️ Elapsed time: {elapsed_time:.2f} seconds")
+    print(f"⏱️  Elapsed time: {elapsed_time:.2f} seconds")
