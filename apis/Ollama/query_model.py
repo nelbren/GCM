@@ -10,9 +10,8 @@ from utils import detect_environment
 
 DEBUG = os.getenv("DEBUG", "False")
 DEBUG = True if DEBUG == "True" else False
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "")
-OLLAMA_API_KEY = os.getenv("OLLAMA_API_KEY", "")
-OLLAMA_API_KEY = OLLAMA_API_KEY.strip()
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "").strip()
+OLLAMA_API_KEY = os.getenv("OLLAMA_API_KEY", "").strip()
 
 
 def list_models():

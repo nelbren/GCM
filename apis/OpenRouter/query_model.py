@@ -13,9 +13,8 @@ from utils import detect_environment
 
 DEBUG = os.getenv("DEBUG", "False")
 DEBUG = True if DEBUG == "True" else False
-OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "FreeAll")
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
-OPENROUTER_API_KEY = OPENROUTER_API_KEY.strip()
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "FreeAll").strip()
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "").strip()
 random.seed(secrets.randbits(64))
 BLACKLIST_PATH = os.path.join(os.path.dirname(__file__), "blacklist.txt")
 
@@ -125,6 +124,7 @@ def query_with_fallback(models_to_use, prompt):
     attempted_models = set()
 
     for model in random.sample(models_to_use, len(models_to_use)):
+        model = model.strip()
         if model in attempted_models:
             continue  # Ya intentado, lo saltamos
 
@@ -191,14 +191,14 @@ def query_model(prompt):
     model = OPENROUTER_MODEL
 
     if model in keywords:
-        models_to_use = list_free_models(OPENROUTER_MODEL)
+        models_to_use = list_free_models(model)
         # print("models_to_use -> ", models_to_use)
         model = random.choice(models_to_use)
         # print("model ->", model)
     else:
         models_to_use = [model]
 
-    # model = model.strip()
+    # print("models_to_use ->", models_to_use)
     return query_with_fallback(models_to_use, prompt)
 
     # return code, model, final_response, usage, elapsed_time

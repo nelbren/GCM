@@ -221,14 +221,14 @@ if __name__ == "__main__":
     env, emoji = detect_environment()
     machine_name = get_machine_name()
 
-    version = update_version_file(version_config)
-    if version:
-        print(f"🔖 Version: {version}")
-
     changes = classify_changes(get_git_changes())
     if not any(changes.values()):
         print("ℹ️ No changes detected. Nothing to do.")
         sys.exit(0)
+
+    version = update_version_file(version_config)
+    if version:
+        print(f"🔖 Version: {version}")
 
     diff_summary = get_git_diff_summary()
     summary = "; ".join(

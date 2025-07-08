@@ -12,9 +12,8 @@ from utils import detect_environment
 
 DEBUG = os.getenv("DEBUG", "False")
 DEBUG = True if DEBUG == "True" else False
-MODEL_TIER = os.getenv("MODEL_TIER", "cheap")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-OPENAI_API_KEY = OPENAI_API_KEY.strip()
+MODEL_TIER = os.getenv("MODEL_TIER", "cheap").strip()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 
 
 def list_models():
