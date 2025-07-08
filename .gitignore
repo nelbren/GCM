@@ -1,10 +1,18 @@
+# Python cache and virtualenv
 __pycache__/
 .venv/
+
+# Global secrets (root level)
 secret.bat
 secret.bash
+
+# API-specific secrets
 apis/OpenRouter/secret.bat
 apis/OpenRouter/secret.bash
 apis/OpenAI/secret.bat
 apis/OpenAI/secret.bash
 apis/Ollama/secret.bat
 apis/Ollama/secret.bash
+
+# API-specific local state files
+apis/OpenRouter/blacklist.txt

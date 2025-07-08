@@ -17,16 +17,17 @@ OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "FreeAll")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 OPENROUTER_API_KEY = OPENROUTER_API_KEY.strip()
 random.seed(secrets.randbits(64))
+BLACKLIST_PATH = os.path.join(os.path.dirname(__file__), "blacklist.txt")
 
 
-def load_blacklist(filename="blacklist.txt"):
+def load_blacklist(filename=BLACKLIST_PATH):
     if not os.path.exists(filename):
         return set()
     with open(filename, "r", encoding="utf-8") as f:
         return set(line.strip() for line in f if line.strip())
 
 
-def save_to_blacklist(model, filename="blacklist.txt"):
+def save_to_blacklist(model, filename=BLACKLIST_PATH):
     with open(filename, "a", encoding="utf-8") as f:
         f.write(f"{model}\n")
 
