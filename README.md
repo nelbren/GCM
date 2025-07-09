@@ -1,9 +1,8 @@
 # GCM - Git Commit Message Generator
 
-## ![Version](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/nelbren/GCM/main/.badges/version.json)
+![Version](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/nelbren/GCM/main/.badges/version.json) ![OS Support](https://img.shields.io/badge/OS-Windows%2C%20macOS%2C%20Linux-success?style=flat-square) ![Environment](https://img.shields.io/badge/ENV-CMD%2C%20PowerShell%2C%20Cygwin%2C%20Bash-success?style=flat-square) ![Ollama](https://img.shields.io/badge/Ollama-✓-green?style=flat-square)  ![OpenAI](https://img.shields.io/badge/OpenAI-✓-green?style=flat-square) ![OpenRouter](https://img.shields.io/badge/OpenRouter-✓-green?style=flat-square)
 
-
-GCM (Git Commit Message Generator) is a cross-platform tool designed to help developers craft professional and consistent Git commit messages by leveraging AI (ChatGPT or Ollama) combined with real-time `git status` and `git diff` analysis.
+**GCM** (**G**it **C**ommit **M**essage Generator) is a cross-platform tool designed to help developers craft professional and consistent Git commit messages by leveraging AI (ChatGPT or Ollama) combined with real-time **`git status`** and **`git diff`** analysis.
 
 ---
 
@@ -160,7 +159,6 @@ prompt_template: |
           deepseek-coder:33b
           qwen2.5:72b
           gemma3:27b
-          huihui_ai/qwq-abliterated:32b
           deepseek-r1:32b
           hhao/qwen2.5-coder-tools:32b
           hhao/qwen2.5-coder-tools:0.5b

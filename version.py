@@ -1,3 +1,5 @@
+import os
+import json
 import yaml
 import subprocess
 from datetime import datetime
@@ -14,6 +16,26 @@ def load_version_config(config_file="version.cfg"):
     except Exception as e:
         print(f"❌ Error reading {config_file}: {e}")
         return {}
+
+
+def generate_version_badge(version, badge_dir=".badges"):
+    try:
+        os.makedirs(badge_dir, exist_ok=True)
+        badge_content = {
+            "schemaVersion": 1,
+            "label": "version",
+            "message": version,
+            "color": "blue"
+        }
+        badge_file = os.path.join(badge_dir, "version.json")
+
+        with open(badge_file, "w", encoding="utf-8") as f:
+            json.dump(badge_content, f, ensure_ascii=False, indent=2)
+
+        print(f"🏷️ Badge created: {badge_file}")
+
+    except Exception as e:
+        print(f"❌ Error creating badge: {e}")
 
 
 def update_version_file(config):
@@ -51,5 +73,8 @@ def update_version_file(config):
     except Exception as e:
         print(f"❌ Error writing {version_file}: {e}")
         return None
+
+    if os.path.isdir(".badges"):
+        generate_version_badge(version)
 
     return version

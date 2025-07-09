@@ -1,6 +1,6 @@
 @echo off
 
-echo 🚀 Running GCM installer for Windows....
+echo 🚀 Running GCM installer for Windows...
 
 call python --version >nul 2>&1
 if errorlevel 1 (
