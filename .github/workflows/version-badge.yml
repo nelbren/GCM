@@ -7,22 +7,24 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v3
 
       - name: Read version.txt
-        id: version
-        run: echo "::set-output name=ver::$(cat version.txt)"
+        run: |
+          VERSION=$(cat version.txt)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
 
-      - name: Create version.json for Shields.io
+      - name: Create .badges/version.json
         run: |
           mkdir -p .badges
-          echo "{ \"schemaVersion\": 1, \"label\": \"version\", \"message\": \"${{ steps.version.outputs.ver }}\", \"color\": \"blue\" }" > .badges/version.json
+          echo "{ \"schemaVersion\": 1, \"label\": \"version\", \"message\": \"${VERSION}\", \"color\": \"blue\" }" > .badges/version.json
 
       - name: Commit badge
         run: |
           git config --local user.email "actions@github.com"
           git config --local user.name "GitHub Actions"
-          git add .badges/version.json
-          git commit -m "Update version badge" || echo "No changes"
+          git add .badges/version.json || true
+          git commit -m "Update version badge" || true
           git push
