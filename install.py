@@ -13,12 +13,12 @@ def ensure_cmdrc_has_alias(script_path):
         with open(cmdrc_path, "r", encoding="utf-8") as f:
             lines = f.read().splitlines()
         if any(alias_line in line for line in lines):
-            print("✔️ Alias 'gcm' ya configurado en cmdrc.bat.")
+            print("✔️ Alias ​​'gcm' already configured in cmdrc.bat.")
             return
     with open(cmdrc_path, "a", encoding="utf-8") as f:
         f.write("\n" + alias_line + "\n")
-    print("✅ Alias 'gcm' agregado a cmdrc.bat.")
-    print("\n📌 Recuerda editar tu acceso directo al CMD para que use:")
+    print("✅ Alias ​​'gcm' added to cmdrc.bat.")
+    print("\n📌 Remember to edit your CMD shortcut to use:")
     print('   %comspec% /k "%USERPROFILE%\\cmdrc.bat"')
 
 
@@ -39,11 +39,11 @@ def ensure_bash_alias(script_path, env):
     if bashrc_path.exists():
         content = bashrc_path.read_text(encoding="utf-8")
         if alias_line in content:
-            print("✔️ Alias 'gcm' ya configurado en .bashrc.")
+            print("✔️ Alias ​​'gcm' already configured in .bashrc.")
         else:
             with open(bashrc_path, "a", encoding="utf-8", newline='\n') as f:
                 f.write("\n" + alias_line + "\n")
-            print("✅ Alias 'gcm' agregado a .bashrc.")
+            print("✅ Alias ​​'gcm' added to .bashrc.")
 
     if env == "MACOS":
         profiles = ['.zprofile', '.bash_profile']
@@ -52,12 +52,12 @@ def ensure_bash_alias(script_path, env):
             if profile_path.exists():
                 content = profile_path.read_text(encoding="utf-8")
                 if alias_line in content:
-                    print(f"✔️ Alias 'gcm' ya configurado en {profile}.")
+                    print(f"✔️ Alias ​​'gcm' already set in {profile}.")
                 else:
                     with open(profile_path, "a", encoding="utf-8",
                               newline='\n') as f:
                         f.write("\n" + alias_line + "\n")
-                    print(f"✅ Alias 'gcm' agregado a {profile}.")
+                    print(f"✅ Alias ​​'gcm' added to {profile}.")
 
 
 def detect_environment():
@@ -91,5 +91,5 @@ if __name__ == "__main__":
     elif env in ("LINUX", "MACOS", "CYGWIN", "GIT BASH"):
         ensure_bash_alias(script_path, env)
     else:
-        print(f"⚠️ Sistema operativo {env}{emoji} "
-              "no soportado automáticamente.")
+        print(f"⚠️ Operating system {env}{emoji} "
+              "not automatically supported.")

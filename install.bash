@@ -1,32 +1,28 @@
 #!/bin/bash
-echo "🚀 Ejecutando instalador GCM para Unix..."
 
-# Verifica que Python esté disponible
+echo "🚀 Running GCM installer for Unix..."
+
 if ! command -v python &> /dev/null; then
-    echo "❌ Python no está instalado."
+    echo "❌ Python is not installed or is not in PATH."
     exit 1
 fi
 
-# Crear entorno virtual si no existe
 if [ ! -d ".venv" ]; then
-    echo "📦 Creando entorno virtual..."
+    echo "📦 Creating virtual environment .venv..."
     python -m venv .venv
 fi
 
-# Activar entorno virtual e instalar requisitos
-echo "🧪 Instalando requisitos..."
+echo "🐍 Activating virtual environment .venv..."
 [ -r .venv/Scripts/activate ] && source .venv/Scripts/activate
 [ -r .venv/bin/activate ] && source .venv/bin/activate
 
-# pip install --upgrade pip > /dev/null
+echo "🧪 Installing requirements within .venv..."
 python -m pip install --upgrade pip > /dev/null
 pip install -r requirements.txt
 
-# Para que esten disponibles para install.py
-export MSYSTEM
-export OSTYPE
+export MSYSTEM # To be available for: install.py
+export OSTYPE  # To be available for: install.py
 
-# Ejecutar configuración
 python install.py
 
-echo "✅ Instalación completa."
+echo "✅ Complete installation."

@@ -1,16 +1,16 @@
-# install_cmdrc.ps1 - Crea o actualiza un acceso directo al CMD que cargue cmdrc.bat
+# Create or update a CMD shortcut that loads cmdrc.bat
 
 $WshShell = New-Object -ComObject WScript.Shell
 
-# Definir ruta del escritorio
+# Define desktop path
 $DesktopPath = [Environment]::GetFolderPath("Desktop")
 $ShortcutPath = Join-Path $DesktopPath "CMD with GCM.lnk"
 
-# Definir el destino del acceso directo
+# Define the shortcut destination
 $CmdPath = "$env:ComSpec"
 $CmdArgs = "/k `"$env:USERPROFILE\cmdrc.bat`""
 
-# Crear o actualizar el acceso directo
+# Create or update the shortcut
 $Shortcut = $WshShell.CreateShortcut($ShortcutPath)
 $Shortcut.TargetPath = $CmdPath
 $Shortcut.Arguments = $CmdArgs
@@ -19,5 +19,5 @@ $Shortcut.WindowStyle = 1
 $Shortcut.IconLocation = "$CmdPath, 0"
 $Shortcut.Save()
 
-Write-Output "✅ Acceso directo creado en el Escritorio: 'CMD with GCM.lnk'"
-Write-Output "   Ejecutará CMD con tu cmdrc.bat cargado automáticamente."
+Write-Output "✅ Shortcut created on the Desktop: 'CMD with GCM.lnk'"
+Write-Output "   It will run CMD with your cmdrc.bat automatically loaded."

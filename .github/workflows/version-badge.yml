@@ -1,0 +1,28 @@
+name: Generate Version Badge
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Read version.txt
+        id: version
+        run: echo "::set-output name=ver::$(cat version.txt)"
+
+      - name: Create version.json for Shields.io
+        run: |
+          mkdir -p .badges
+          echo "{ \"schemaVersion\": 1, \"label\": \"version\", \"message\": \"${{ steps.version.outputs.ver }}\", \"color\": \"blue\" }" > .badges/version.json
+
+      - name: Commit badge
+        run: |
+          git config --local user.email "actions@github.com"
+          git config --local user.name "GitHub Actions"
+          git add .badges/version.json
+          git commit -m "Update version badge" || echo "No changes"
+          git push

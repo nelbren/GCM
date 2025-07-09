@@ -1,5 +1,8 @@
 # GCM - Git Commit Message Generator
 
+## ![Version](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/nelbren/GCM/main/.badges/version.json)
+
+
 GCM (Git Commit Message Generator) is a cross-platform tool designed to help developers craft professional and consistent Git commit messages by leveraging AI (ChatGPT or Ollama) combined with real-time `git status` and `git diff` analysis.
 
 ---
@@ -57,6 +60,9 @@ GCM/
 ├── run.bash
 ├── config.yml
 ├── requirements.txt
+├── version.cfg
+├── version.py
+├── version.txt
 └── utils.py
 ```
 
@@ -79,8 +85,6 @@ GCM/
 ## 🔑 Configuration (config.yml example)
 
 ```yaml
-ollama_model: gemma3:27b
-model_tier: cheap
 max_tokens: 600
 use_confirmation: true
 save_history: true
@@ -120,7 +124,7 @@ prompt_template: |
 
 ## 🛠 Installation
 
-- Use the provided `install.bat` (Windows) or `install.bash` (Linux/Mac) to set up the environment.
+- Use the provided `install.bat` (🪟Windows) or `install.bash` (🐧Linux / 🍎MacOS) to set up the environment.
 - Virtual environments are supported (`.venv`).
 - Creates aliases or shortcuts for seamless execution.
 
@@ -134,9 +138,284 @@ prompt_template: |
 
 ## 🌐 Supported Models
 
-- **OpenAI:** gpt-3.5-turbo, gpt-4o, or configurable models.
-- **Ollama:** llama3, gemma, or any local model served by Ollama.
-- **OpenRouter:** any free models.
+- ### 🤖 Ollama: Supports models like 🧠 `llama3`, `gemma`, or any local model served by Ollama.
+
+  - #### Environment Variable: `OLLAMA_MODEL`
+
+    - ##### To list available models:
+    
+      - 🪟 **Windows (CMD):**
+        
+        - 💻 **Commands:**
+          ```bash
+          cd apis\Ollama
+          list.bat
+          ```
+
+        - 👀 **Example:**
+          ```
+          C:\Users\nelbren\GCM\apis\Ollama>list.bat
+          List models:
+          ------------
+          deepseek-coder:33b
+          qwen2.5:72b
+          gemma3:27b
+          huihui_ai/qwq-abliterated:32b
+          deepseek-r1:32b
+          hhao/qwen2.5-coder-tools:32b
+          hhao/qwen2.5-coder-tools:0.5b
+          stable-code:3b-code-q4_0
+          codegemma:2b
+          gemma:2b
+          ```
+
+      - 🪟 **Windows (PowerShell):**
+
+        - 💻 **Commands:**
+          ```bash
+          cd apis\Ollama
+          .\run.bat
+          ```
+
+      - 🐧 **Linux** | 🍎 **macOS** | 🪟 **Windows (Cygwin / Git Bash):**
+
+        - 💻 **Commands:**
+          ```bash
+          cd apis/Ollama
+          ./list.bash
+          ```
+
+
+- ### OpenAI: `gpt-3.5-turbo`, `gpt-4o`, or configurable models.
+
+  - #### Environment Variable: `MODEL_TIER`
+    
+      - ##### `cheap`
+        - ###### OPENAI_MODEL=gpt-3.5-turbo
+      - ##### `premium`
+        - ###### OPENAI_MODEL=gpt-4o
+
+    - ##### To list available models:
+    
+      - 🪟 **Windows (CMD):**
+
+        - 💻 **Commands:**
+          ```bash
+          cd apis\OpenAI
+          list.bat
+          ```
+
+        - 👀 **Example:**
+
+        ```
+        C:\Users\nelbren\GCM\apis\OpenAI>list.bat
+        List models:
+        ------------
+        gpt-4-0613
+        gpt-4
+        gpt-3.5-turbo
+        o4-mini-deep-research-2025-06-26
+        codex-mini-latest
+        gpt-4o-realtime-preview-2025-06-03
+        gpt-4o-audio-preview-2025-06-03
+        o4-mini-deep-research
+        davinci-002
+        babbage-002
+        gpt-3.5-turbo-instruct
+        gpt-3.5-turbo-instruct-0914
+        dall-e-3
+        dall-e-2
+        gpt-4-1106-preview
+        gpt-3.5-turbo-1106
+        tts-1-hd
+        tts-1-1106
+        tts-1-hd-1106
+        text-embedding-3-small
+        text-embedding-3-large
+        gpt-4-0125-preview
+        gpt-4-turbo-preview
+        gpt-3.5-turbo-0125
+        gpt-4-turbo
+        gpt-4-turbo-2024-04-09
+        gpt-4o
+        gpt-4o-2024-05-13
+        gpt-4o-mini-2024-07-18
+        gpt-4o-mini
+        gpt-4o-2024-08-06
+        chatgpt-4o-latest
+        o1-preview-2024-09-12
+        o1-preview
+        o1-mini-2024-09-12
+        o1-mini
+        gpt-4o-realtime-preview-2024-10-01
+        gpt-4o-audio-preview-2024-10-01
+        gpt-4o-audio-preview
+        gpt-4o-realtime-preview
+        omni-moderation-latest
+        omni-moderation-2024-09-26
+        gpt-4o-realtime-preview-2024-12-17
+        gpt-4o-audio-preview-2024-12-17
+        gpt-4o-mini-realtime-preview-2024-12-17
+        gpt-4o-mini-audio-preview-2024-12-17
+        o1-2024-12-17
+        o1
+        gpt-4o-mini-realtime-preview
+        gpt-4o-mini-audio-preview
+        o3-mini
+        o3-mini-2025-01-31
+        gpt-4o-2024-11-20
+        gpt-4.5-preview
+        gpt-4.5-preview-2025-02-27
+        gpt-4o-search-preview-2025-03-11
+        gpt-4o-search-preview
+        gpt-4o-mini-search-preview-2025-03-11
+        gpt-4o-mini-search-preview
+        gpt-4o-transcribe
+        gpt-4o-mini-transcribe
+        o1-pro-2025-03-19
+        o1-pro
+        gpt-4o-mini-tts
+        o4-mini-2025-04-16
+        o4-mini
+        gpt-4.1-2025-04-14
+        gpt-4.1
+        gpt-4.1-mini-2025-04-14
+        gpt-4.1-mini
+        gpt-4.1-nano-2025-04-14
+        gpt-4.1-nano
+        gpt-image-1
+        gpt-3.5-turbo-16k
+        tts-1
+        whisper-1
+        text-embedding-ada-002
+        ```
+
+      - 🪟 **Windows (PowerShell):**
+
+        - 💻 **Commands:**
+          ```bash
+          cd apis\OpenAI
+          .\run.bat
+          ```
+
+      - 🐧 **Linux** | 🍎 **macOS** | 🪟 **Windows (Cygwin / Git Bash):**
+
+        - 💻 **Commands:**
+          ```bash
+          cd apis/OpenAI
+          ./list.bash
+          ```
+
+  - #### Environment Variable: `OPENAI_MODEL`
+
+    - ###### Select specific model from **OpenAI**
+
+- ### OpenRouter: any free models.
+
+  - #### Environment Variable: `OPENROUTER_MODEL`
+
+    - ##### `FreeAll`
+      Selects any available free model, without prioritization. Broadest selection.
+
+    - ##### `FreeTop`  
+      Selects the top-rated free models based on community feedback and performance.
+
+    - ##### `FreeCtxMax`  
+      Prioritizes free models with the largest context window available for longer prompts.
+
+    - ##### `FreeSmart`  
+      Dynamically selects the most balanced free model considering speed, context, and quality.
+
+
+    - ##### To list available models:
+    
+      - 🪟 **Windows (CMD):**
+
+        - 💻 **Commands:**
+          ```bash
+          cd apis\OpenRoute
+          list.bat
+          ```
+
+        - 👀 **Example:**
+
+        ```
+        C:\Users\nelbren\GCM\apis\OpenRouter>list.bat
+        Free models:
+        ------------
+        tencent/hunyuan-a13b-instruct:free
+        tngtech/deepseek-r1t2-chimera:free
+        openrouter/cypher-alpha:free
+        mistralai/mistral-small-3.2-24b-instruct:free
+        moonshotai/kimi-dev-72b:free
+        deepseek/deepseek-r1-0528-qwen3-8b:free
+        deepseek/deepseek-r1-0528:free
+        sarvamai/sarvam-m:free
+        mistralai/devstral-small:free
+        google/gemma-3n-e4b-it:free
+        qwen/qwen3-30b-a3b:free
+        qwen/qwen3-8b:free
+        qwen/qwen3-14b:free
+        qwen/qwen3-32b:free
+        qwen/qwen3-235b-a22b:free
+        tngtech/deepseek-r1t-chimera:free
+        microsoft/mai-ds-r1:free
+        thudm/glm-z1-32b:free
+        thudm/glm-4-32b:free
+        shisa-ai/shisa-v2-llama3.3-70b:free
+        arliai/qwq-32b-arliai-rpr-v1:free
+        agentica-org/deepcoder-14b-preview:free
+        moonshotai/kimi-vl-a3b-thinking:free
+        nvidia/llama-3.3-nemotron-super-49b-v1:free
+        meta-llama/llama-4-maverick:free
+        meta-llama/llama-4-scout:free
+        deepseek/deepseek-v3-base:free
+        google/gemini-2.5-pro-exp-03-25
+        qwen/qwen2.5-vl-32b-instruct:free
+        deepseek/deepseek-chat-v3-0324:free
+        featherless/qwerky-72b:free
+        mistralai/mistral-small-3.1-24b-instruct:free
+        google/gemma-3-4b-it:free
+        google/gemma-3-12b-it:free
+        rekaai/reka-flash-3:free
+        google/gemma-3-27b-it:free
+        qwen/qwq-32b:free
+        nousresearch/deephermes-3-llama-3-8b-preview:free
+        cognitivecomputations/dolphin3.0-r1-mistral-24b:free
+        cognitivecomputations/dolphin3.0-mistral-24b:free
+        qwen/qwen2.5-vl-72b-instruct:free
+        mistralai/mistral-small-24b-instruct-2501:free
+        deepseek/deepseek-r1-distill-qwen-14b:free
+        deepseek/deepseek-r1-distill-llama-70b:free
+        deepseek/deepseek-r1:free
+        deepseek/deepseek-chat:free
+        google/gemini-2.0-flash-exp:free
+        meta-llama/llama-3.3-70b-instruct:free
+        qwen/qwen-2.5-coder-32b-instruct:free
+        meta-llama/llama-3.2-11b-vision-instruct:free
+        qwen/qwen-2.5-72b-instruct:free
+        mistralai/mistral-nemo:free
+        google/gemma-2-9b-it:free
+        mistralai/mistral-7b-instruct:free
+        ```
+
+      - 🪟 **Windows (PowerShell):**
+
+        - 💻 **Commands:**
+          ```bash
+          cd apis\OpenRoute
+          .\run.bat
+          ```
+
+      - 🐧 **Linux** | 🍎 **macOS** | 🪟 **Windows (Cygwin / Git Bash):**
+
+        - 💻 **Commands:**
+          ```bash
+          cd apis/OpenRoute
+          ./list.bash
+          ```
+
+
 
 ---
 

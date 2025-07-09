@@ -1,5 +1,5 @@
 @echo off
 
-REM install_cmdrc.bat - Crea o actualiza un acceso directo al CMD con cmdrc.bat cargado
+REM Create or update a CMD shortcut with cmdrc.bat loaded
 
 powershell -ExecutionPolicy Bypass -NoProfile -Command "& '%~dp0install_cmdrc.ps1'"
