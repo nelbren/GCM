@@ -7,22 +7,20 @@ if [ "$OSTYPE" == "cygwin" ]; then
     # setup-x86_64.exe -P python 
 fi
 
-# Verifica existencia de config.yml
 if [ ! -f "${SCRIPT_DIR}/config.yml" ]; then
-    echo "❌ ${SCRIPT_DIR}/config.yml no encontrado. Aborta."
+    echo "❌ ${SCRIPT_DIR}/config.yml not found. Abort."
     exit 1
 fi
 
 # Verifica entorno virtual
 if [ ! -f "${SCRIPT_DIR}/.venv/Scripts/python" -a \
      ! -f "${SCRIPT_DIR}/.venv/bin/python" ]; then
-    echo "❌ Entorno virtual no encontrado. Ejecuta install.bash primero."
+    echo "❌ Virtual environment .venv not found. Run install.bat first."
     exit 1
 fi
 
-# Para que esten disponibles para gpm.py
-export MSYSTEM
-export OSTYPE
+export MSYSTEM # To make them available to gpm.py
+export OSTYPE  # To make them available to gpm.py
 
 BASE_DIR="${SCRIPT_DIR}/apis"
 
@@ -35,13 +33,9 @@ for dir in "$BASE_DIR"/*/; do
         exit 1
     fi
 
-    # Fijar la Key
     source "$SECRET_FILE"
 done
 
-# echo $OPENROUTER_MODEL
-
-# Ejecuta el script usando el entorno virtual
 if [ "$OSTYPE" == "cygwin" ]; then
     "$WIN_SCRIPT_DIR/.venv/Scripts/python.exe" "$WIN_SCRIPT_DIR/gcm.py" "$@"
 else
