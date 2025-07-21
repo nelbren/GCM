@@ -40,8 +40,6 @@ def load_config(path=None):
 
 config = load_config()
 version_config = load_version_config()
-# print(version_config)
-# exit(1)
 
 USE_OLLAMA = os.getenv("USE_OLLAMA", "True")
 USE_OLLAMA = True if USE_OLLAMA == "True" else False
@@ -134,7 +132,7 @@ def classify_changes(lines):
     return changes
 
 
-def build_prompt(changes, diff_summary=""):
+def build_prompt(changes, diff_summary="", note=""):
     summary = []
     for key, files in changes.items():
         if files:
@@ -142,6 +140,7 @@ def build_prompt(changes, diff_summary=""):
             summary.append(f"{key}: {filenames}")
 
     prompt_filled = PROMPT_TEMPLATE.format(
+        note=note.strip(),
         changes="; ".join(summary),
         diff=diff_summary or "No diff available."
     )
@@ -166,7 +165,8 @@ def build_commit_message(env, emoji, machine, summary,
         "chore:": "🧹:",
         "feat:": "✨:",
         "fix:": "🛠️:",
-        "docs:": "📄"
+        "docs:": "📄",
+        "refactor:": "🔧"
     }
 
     for line in suggestion.splitlines():
@@ -236,7 +236,9 @@ if __name__ == "__main__":
         for key, v in changes.items() if v
     )
 
-    prompt = build_prompt(changes, diff_summary)
+    user_note = sys.argv[1] if len(sys.argv) > 1 else "None"
+
+    prompt = build_prompt(changes, diff_summary, user_note)
 
     messages = []
     used_models = set()  # Here we keep track of the control in memory
@@ -263,7 +265,7 @@ if __name__ == "__main__":
 
             used_models.add(unique_key)
 
-            if code == 200:
+            if code == 200 and isinstance(response, str):
                 content = response[:MAX_CHARACTERS] \
                     if MAX_CHARACTERS else response
                 message = build_commit_message(
@@ -282,11 +284,6 @@ if __name__ == "__main__":
 
     print("\n📝 Suggested Commit Message:\n")
     for idx, (provider, model, msg, usage, elapsed) in enumerate(messages, 1):
-        # print(f"#{idx}: 🤖 {provider} 🧠 {model} | ", end="")
-        # fix = " " if env == "MACOS" else ""
-        # print(f"⏱️{fix} Elapsed time: {elapsed:.2f} seconds")
-        # print(f"#{idx}: 🤖 {provider} 🧠 {model} | ", end="")
-        # print("-" * columns)
         strIdx = str(idx)
         cols = columns - len(strIdx) - 4
         print(f"[ {strIdx} ]{'-' * cols}")
@@ -295,9 +292,6 @@ if __name__ == "__main__":
             print("-" * columns)
             print(format_usage(usage))
         print("=" * columns)
-
-    # cost = get_cost(USE_OLLAMA, MODEL_TIER)
-    #    print(f"🤖 Ollama 🧠 {OLLAMA_MODEL} ({cost})")
 
     if USE_CONFIRM:
         options = len(messages)

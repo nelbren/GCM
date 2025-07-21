@@ -26,8 +26,15 @@ prompt_template: |
   5. Never leave a paragraph, sentence, or idea incomplete. Avoid unfinished sentences.
   6. Do not use markdown, use plain text.
 
+  Additional context from the user (optional):
+  The following text was provided by the user as guidance or explanation.
+  You may interpret, clarify, and rewrite it to improve the message, but preserve the intent and meaning:
+
+  {note}
+
   Changes:
   {changes}
 
   Diff summary:
   {diff}
+

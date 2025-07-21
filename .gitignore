@@ -2,10 +2,6 @@
 __pycache__/
 .venv/
 
-# Global secrets (root level)
-secret.bat
-secret.bash
-
 # API-specific secrets
 apis/OpenRouter/secret.bat
 apis/OpenRouter/secret.bash
