@@ -53,11 +53,11 @@ def query_model(prompt):
     start_time = time.time()
 
     if MODEL_TIER == "cheap":
-        OPENAI_MODEL = "gpt-3.5-turbo"
+        OPENAI_MODEL = "gpt-5-nano"
     elif MODEL_TIER == "premium":
-        OPENAI_MODEL = "gpt-4o"
+        OPENAI_MODEL = "gpt-5"
     else:
-        OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
+        OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5-mini")
 
     model = OPENAI_MODEL
     if model == "RANDOM":
@@ -75,7 +75,7 @@ def query_model(prompt):
             messages=[
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=400
+            max_completion_tokens=400,
         )
         code = 200
     except client.error.OpenAIError as e:

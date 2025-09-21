@@ -9,7 +9,7 @@ if exist %SCRIPT_DIR%apis\OpenRouter\secret.bat (
 
 if exist %SCRIPT_DIR%apis\OpenAI\secret.bat (
     echo 🔐 Setting Keys for OpenAI Secret File...
-    call %SCRIPT_DIR%apis\OpenRouter\secret.bat
+    call %SCRIPT_DIR%apis\OpenAI\secret.bat
 )
 
 if exist %SCRIPT_DIR%apis\Ollama\secret.bat (

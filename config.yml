@@ -6,35 +6,44 @@ max_characters: 500
 suggested_messages: 3
 
 emojis:
-  header: "🔀"
-  add: "🆕"
-  change: "📝"
-  delete: "🗑️"
-  info: "ℹ️"
-  summary: "🎯"
-  windows: "🪟"
-  macos: "🍎"
-  linux: "🐧"
+   header: "🔀"
+   add: "🆕"
+   change: "📝"
+   delete: "🗑️"
+   info: "ℹ️"
+   summary: "🎯"
+   windows: "🪟"
+   macos: "🍎"
+   linux: "🐧"
 
 prompt_template: |
-  You are an expert software engineer and Git practitioner. Based on the following Git status summary, generate a clear and complete Git commit message with the following structure:
+   You are an expert software engineer and Git practitioner.
+   Your ONLY output must be a compact plain-text commit message (≤300 chars).
+   DO NOT echo, quote, or list any file paths or raw input from {changes} or {diff}.
 
-  1. A concise summary line using the Conventional Commits format (e.g., feat:, fix:, chore:, refactor:).
-  2. A short descriptive paragraph explaining what was added, changed, or removed and why.
-  3. Optionally, include a brief explanation or rationale if it helps clarify the purpose of the changes.
-  4. The total length of the commit message must not exceed 300 characters. If necessary, shorten the content but ensure that every sentence or idea is complete and not cut off mid-word or mid-phrase.
-  5. Never leave a paragraph, sentence, or idea incomplete. Avoid unfinished sentences.
-  6. Do not use markdown, use plain text.
+   BEFORE writing the commit message, internally perform:
+   1) Normalize: decode/clean path text; remove duplicates (same logical file across different roots like Sources/ and Outputs counts once).
+   2) Group: by directory/topic and by numbered sequence (e.g., images/001.png..079.png).
+   3) Count: produce totals per change type (added/modified/removed) and roll-ups by major group
+      (e.g., "Kali 2018.4 images", "Metasploitable3 images", "Criptografia images").
+   4) Summarize: NEVER enumerate files; use counts/ranges only. If >20 items in a group, show just the count.
 
-  Additional context from the user (optional):
-  The following text was provided by the user as guidance or explanation.
-  You may interpret, clarify, and rewrite it to improve the message, but preserve the intent and meaning:
+   HARD CONSTRAINTS (must follow):
+   - Do NOT print any path, filename, quotes, ranges, or lists from {changes}/{diff}.
+   - Show at most 2 topical roll-ups (largest groups) and collapse the rest as "others".
+   - Prefer numbers over examples (e.g., "79 images" not the filenames).
+   - Keep complete sentences; no markdown.
 
-  {note}
+   Commit message structure:
+   - First line: Conventional Commits summary (feat|fix|chore|refactor|docs|test|ci|build|perf|style).
+   - One short sentence explaining the why/intent.
+   - One short sentence with totals/roll-ups (numbers only).
 
-  Changes:
-  {changes}
+   Additional context (optional). You may rewrite it to improve clarity but do NOT list files:
+   {note}
 
-  Diff summary:
-  {diff}
+   Changes (use only to compute counts; NEVER print them):
+   {changes}
 
+   Diff summary (use only to compute counts; NEVER print it):
+   {diff}
