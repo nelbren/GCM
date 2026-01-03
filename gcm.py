@@ -160,7 +160,7 @@ def get_location():
         return f"Unknown ({type(e).__name__}: {e})"
 
 
-def amend_commit_message(e):
+def amend_commit_message():
     subprocess.run(
         ["git", "commit", "--amend"],
         check=True
