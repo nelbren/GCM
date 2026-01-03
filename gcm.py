@@ -7,6 +7,7 @@ import sys
 import yaml
 import shutil
 import socket
+import requests
 import subprocess
 from datetime import datetime
 from utils import detect_environment, ENVIRONMENT_EMOJI, \
@@ -147,6 +148,25 @@ def build_prompt(changes, diff_summary="", note=""):
     return prompt_filled
 
 
+def get_location():
+    try:
+        r = requests.get("https://ipinfo.io/json", timeout=5)
+        data = r.json()
+        city = data.get("city", "Unknown city")
+        region = data.get("region", "")
+        country = data.get("country", "")
+        return f"{city}, {region}, {country}".strip(", ")
+    except Exception as e:
+        return f"Unknown ({type(e).__name__}: {e})"
+
+
+def amend_commit_message(new_message):
+    subprocess.run(
+        ["git", "commit", "--amend", "-m", new_message],
+        check=True
+    )
+
+
 def build_commit_message(env, emoji, machine, summary,
                          suggestion, diff_summary,
                          provider, model, elapsed):
@@ -186,7 +206,10 @@ def build_commit_message(env, emoji, machine, summary,
     commit_count = get_commit_count() + 1
     commit_number_str = f"{commit_count:011,}"
     timestamp_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-    commit_id_line = f"🆔: {commit_number_str} | 🕒: {timestamp_str} " + \
+    location_str = get_location()
+    commit_id_line = f"🆔: {commit_number_str} " + \
+                     f"| 🕒: {timestamp_str} " + \
+                     f"| 📍: {location_str} " + \
                      f"| {ENVIRONMENT_EMOJI}: {env} " \
                      f"| 🤖: {provider} 🧠: {model} " \
                      f"| ⏱️: {elapsed:.2f} secs"
@@ -323,6 +346,8 @@ if __name__ == "__main__":
 
         if SAVE_HISTORY:
             save_to_history(message, HISTORY_PATH)
+        
+        amend_commit_message()
 
     except subprocess.CalledProcessError as e:
         print("❌ Error executing git commit:", e)

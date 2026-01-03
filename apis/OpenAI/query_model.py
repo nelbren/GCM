@@ -55,7 +55,7 @@ def query_model(prompt):
     if MODEL_TIER == "cheap":
         OPENAI_MODEL = "gpt-5-nano"
     elif MODEL_TIER == "premium":
-        OPENAI_MODEL = "gpt-5"
+        OPENAI_MODEL = "gpt-5.2"
     else:
         OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5-mini")
 
