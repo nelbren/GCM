@@ -160,9 +160,9 @@ def get_location():
         return f"Unknown ({type(e).__name__}: {e})"
 
 
-def amend_commit_message(new_message):
+def amend_commit_message(e):
     subprocess.run(
-        ["git", "commit", "--amend", "-m", new_message],
+        ["git", "commit", "--amend"],
         check=True
     )
 
@@ -347,7 +347,7 @@ if __name__ == "__main__":
         if SAVE_HISTORY:
             save_to_history(message, HISTORY_PATH)
         
-        amend_commit_message(message)
+        amend_commit_message()
 
     except subprocess.CalledProcessError as e:
         print("❌ Error executing git commit:", e)
