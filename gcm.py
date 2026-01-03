@@ -347,7 +347,7 @@ if __name__ == "__main__":
         if SAVE_HISTORY:
             save_to_history(message, HISTORY_PATH)
         
-        amend_commit_message()
+        amend_commit_message(message)
 
     except subprocess.CalledProcessError as e:
         print("❌ Error executing git commit:", e)
