@@ -12,11 +12,12 @@ DEBUG = os.getenv("DEBUG", "False")
 DEBUG = True if DEBUG == "True" else False
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "").strip()
 OLLAMA_API_KEY = os.getenv("OLLAMA_API_KEY", "").strip()
+OLLAMA_HOST = os.getenv("OLLAMA_HOST", "localhost:11434").strip()
 
 
 def list_models():
     models = []
-    response = requests.get("http://localhost:11434/api/tags")
+    response = requests.get(f"http://{OLLAMA_HOST}/api/tags")
 
     if response.status_code == 200:
         models_availables = response.json().get("models", [])
@@ -48,7 +49,7 @@ def query_model(prompt):
     code = 666
     try:
         response = requests.post(
-            "http://localhost:11434/api/generate",
+            f"http://{OLLAMA_HOST}/api/generate",
             json={
                 "model": model,
                 "prompt": prompt,
