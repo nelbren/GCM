@@ -8,7 +8,7 @@ import secrets
 import requests
 
 sys.path.append('../..')
-from utils import detect_environment
+from utils import detect_environment  # noqa: E402
 
 
 DEBUG = os.getenv("DEBUG", "False")

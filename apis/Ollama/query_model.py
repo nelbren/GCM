@@ -6,7 +6,7 @@ import random
 import requests
 
 sys.path.append('../..')
-from utils import detect_environment
+from utils import detect_environment  # noqa: E402
 
 DEBUG = os.getenv("DEBUG", "False")
 DEBUG = True if DEBUG == "True" else False
@@ -84,7 +84,7 @@ def query_model(prompt):
     if code != 200:
         print(f"❌ ({code}: {error})")
         if DEBUG:
-            print(response.status_code)
+            print(response)
         return code, model, response, usage, elapsed_time
     else:
         print("✅")

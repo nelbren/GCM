@@ -4,10 +4,10 @@ import time
 import json
 import random
 import requests
-from openai import OpenAI
+from openai import OpenAI, OpenAIError
 
 sys.path.append('../..')
-from utils import detect_environment
+from utils import detect_environment  # noqa: E402
 
 
 DEBUG = os.getenv("DEBUG", "False")
@@ -67,38 +67,46 @@ def query_model(prompt):
     provider = "OpenAI"
     model = model.strip()
     print(f"🔍 Consulting 🤖 {provider} 🧠 {model}...", end='', flush=True)
-    code = None
+    code = 500
     client = OpenAI(api_key=OPENAI_API_KEY)
     try:
-        response = client.chat.completions.create(
+        response = client.responses.create(
             model=model,
-            messages=[
-                {"role": "user", "content": prompt}
-            ],
-            max_completion_tokens=400,
+            input=prompt,
+            max_output_tokens=400
         )
         code = 200
-    except client.error.OpenAIError as e:
-        code = getattr(e, 'http_status', 500)
-        return code, None, str(e), None, 0
 
-    elapsed_time = time.time() - start_time
+        if DEBUG:
+            data = response.json()
+            print(json.dumps(data, indent=4))
 
-    if DEBUG:
-        data = response.json()
-        print(json.dumps(data, indent=4))
+        content = (getattr(response, "output_text", "") or "").strip()
 
-    content = response.choices[0].message.content.strip()
-    usage = {
-        "prompt_tokens": response.usage.prompt_tokens,
-        "completion_tokens": response.usage.completion_tokens,
-        "total_tokens": response.usage.total_tokens
-    }
+        usage = getattr(response, "usage", None)
+        if usage is not None:
+            usage = {
+                "prompt_tokens": getattr(usage, "input_tokens", 0) or 0,
+                "completion_tokens": getattr(usage, "output_tokens", 0) or 0,
+                "total_tokens": getattr(usage, "total_tokens", 0) or 0,
+            }
+        else:
+            usage = {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+            }
+
+    except OpenAIError as e:
+        code = getattr(e, "status_code", 500) or 500
+        content = f"❌ ERROR = {e}"
+    finally:
+        elapsed_time = time.time() - start_time
 
     if code != 200:
         print(f"❌ {code})")
         if DEBUG:
-            print(response.status_code)
+            print(response)
         return code, model, response, usage, elapsed_time
     else:
         print("✅")
