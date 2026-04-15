@@ -5,16 +5,24 @@ import subprocess
 from datetime import datetime
 
 
+def safe_print(message):
+    try:
+        print(message)
+    except UnicodeEncodeError:
+        fallback = message.encode("ascii", errors="ignore").decode("ascii")
+        print(fallback or "[message could not be displayed in this terminal]")
+
+
 def load_version_config(config_file="version.cfg"):
     try:
         with open(config_file, "r", encoding="utf-8") as f:
             return yaml.safe_load(f) or {}
     except FileNotFoundError:
-        print(f"⚠️ Version configuration not found: {config_file}. "
-              "It's okay, it's optional.")
+        safe_print(f"⚠️ Version configuration not found: {config_file}. "
+                   "It's okay, it's optional.")
         return {}
     except Exception as e:
-        print(f"❌ Error reading {config_file}: {e}")
+        safe_print(f"❌ Error reading {config_file}: {e}")
         return {}
 
 
@@ -32,10 +40,10 @@ def generate_version_badge(version, badge_dir=".badges"):
         with open(badge_file, "w", encoding="utf-8") as f:
             json.dump(badge_content, f, ensure_ascii=False, indent=2)
 
-        print(f"🏷️ Badge created: {badge_file}")
+        safe_print(f"🏷️ Badge created: {badge_file}")
 
     except Exception as e:
-        print(f"❌ Error creating badge: {e}")
+        safe_print(f"❌ Error creating badge: {e}")
 
 
 def update_version_file(config):
@@ -53,8 +61,8 @@ def update_version_file(config):
             version = f"{commit_count:011,}"
             # version = str(commit_count + 1)
         except Exception as e:
-            print(f"⚠️ Error getting number of commits: {e}. "
-                  "Or there are no commits.")
+            safe_print(f"⚠️ Error getting number of commits: {e}. "
+                       "Or there are no commits.")
             # return None
             commit_count = 1
             version = f"{commit_count:011,}"
@@ -68,10 +76,10 @@ def update_version_file(config):
     try:
         with open(version_file, "w", encoding="utf-8") as f:
             f.write(version)
-        print(f"🆙 Updated version: {version}"
-              f" → saved in {version_file}")
+        safe_print(f"🆙 Updated version: {version}"
+                   f" → saved in {version_file}")
     except Exception as e:
-        print(f"❌ Error writing {version_file}: {e}")
+        safe_print(f"❌ Error writing {version_file}: {e}")
         return None
 
     if os.path.isdir(".badges"):

@@ -16,6 +16,15 @@ MODEL_TIER = os.getenv("MODEL_TIER", "cheap").strip()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 
 
+def safe_print(message, **kwargs):
+    try:
+        print(message, **kwargs)
+    except UnicodeEncodeError:
+        fallback = message.encode("ascii", errors="ignore").decode("ascii")
+        print(fallback or "[message could not be displayed in this terminal]",
+              **kwargs)
+
+
 def list_models():
     code = None
     models = []
@@ -39,9 +48,9 @@ def list_models():
     else:
         if "error" in data:
             error = data["error"]["message"]
-        print(f"❌ ({code}: {error}")
+        safe_print(f"❌ ({code}: {error}")
         if DEBUG:
-            print(response.text)
+            safe_print(response.text)
 
     return models
 
@@ -66,7 +75,7 @@ def query_model(prompt):
 
     provider = "OpenAI"
     model = model.strip()
-    print(f"🔍 Consulting 🤖 {provider} 🧠 {model}...", end='', flush=True)
+    safe_print(f"🔍 Consulting 🤖 {provider} 🧠 {model}...", end='', flush=True)
     code = 500
     client = OpenAI(api_key=OPENAI_API_KEY)
     try:
@@ -79,7 +88,7 @@ def query_model(prompt):
 
         if DEBUG:
             data = response.json()
-            print(json.dumps(data, indent=4))
+            safe_print(json.dumps(data, indent=4))
 
         content = (getattr(response, "output_text", "") or "").strip()
 
@@ -104,12 +113,12 @@ def query_model(prompt):
         elapsed_time = time.time() - start_time
 
     if code != 200:
-        print(f"❌ {code})")
+        safe_print(f"❌ {code})")
         if DEBUG:
-            print(response)
+            safe_print(str(response))
         return code, model, response, usage, elapsed_time
     else:
-        print("✅")
+        safe_print("✅")
 
     return code, model, content, usage, elapsed_time
 
@@ -118,17 +127,17 @@ if __name__ == "__main__":
     argv = sys.argv[1:]
     if len(argv) > 0 and argv[0] == "list":
         models = list_models()
-        print("List models:")
-        print("------------")
+        safe_print("List models:")
+        safe_print("------------")
         for model in models:
-            print(model)
+            safe_print(model)
         exit(0)
     env, emoji = detect_environment()
     prompt = "What is the meaning of life?"
     code, model, content, usage, elapsed_time = query_model(prompt)
-    print(f"🌐 Code: {code}")
-    print(f"🧠 Model: {model}")
-    print(f"💬 Response: {content}")
-    print(f"📊 Usage: {usage}")
+    safe_print(f"🌐 Code: {code}")
+    safe_print(f"🧠 Model: {model}")
+    safe_print(f"💬 Response: {content}")
+    safe_print(f"📊 Usage: {usage}")
     fix = " " if env == "MACOS" else ""
-    print(f"⏱️{fix} Elapsed time: {elapsed_time:.2f} seconds")
+    safe_print(f"⏱️{fix} Elapsed time: {elapsed_time:.2f} seconds")

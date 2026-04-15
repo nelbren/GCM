@@ -71,6 +71,14 @@ PROMPT_TEMPLATE = config.get("prompt_template", "")
 columns = shutil.get_terminal_size().columns
 
 
+def safe_print(message):
+    try:
+        print(message)
+    except UnicodeEncodeError:
+        fallback = message.encode("ascii", errors="ignore").decode("ascii")
+        print(fallback or "[message could not be displayed in this terminal]")
+
+
 def is_git_repo():
     return os.path.isdir(".git")
 
@@ -89,7 +97,7 @@ def get_git_changes():
         )
         return result.stdout.strip().splitlines()
     except subprocess.CalledProcessError as e:
-        print("Error ejecutando git:", e)
+        safe_print(f"Error ejecutando git: {e}")
         sys.exit(1)
 
 
@@ -224,7 +232,7 @@ def save_to_history(message, path):
         with open(os.path.expanduser(path), "a", encoding="utf-8") as f:
             f.write(message + "\n" + ("-" * 80) + "\n")
     except Exception as e:
-        print(f"⚠️ Could not save history: {e}")
+        safe_print(f"⚠️ Could not save history: {e}")
 
 
 def has_staged_changes():
@@ -238,7 +246,7 @@ def has_staged_changes():
 
 if __name__ == "__main__":
     if not is_git_repo():
-        print("❌ This directory is not a valid Git repository (missing .git).")
+        safe_print("❌ This directory is not a valid Git repository (missing .git).")
         sys.exit(1)
 
     env, emoji = detect_environment()
@@ -246,12 +254,16 @@ if __name__ == "__main__":
 
     changes = classify_changes(get_git_changes())
     if not any(changes.values()):
-        print("ℹ️ No changes detected. Nothing to do.")
+        safe_print("ℹ️ No changes detected. Nothing to do.")
+        sys.exit(0)
+
+    if not available_apis:
+        safe_print("❌ No AI providers configured. Set OpenAI, OpenRouter, or Ollama credentials first.")
         sys.exit(0)
 
     version = update_version_file(version_config)
     if version:
-        print(f"🔖 Version: {version}")
+        safe_print(f"🔖 Version: {version}")
 
     diff_summary = get_git_diff_summary()
     summary = "; ".join(
@@ -302,19 +314,19 @@ if __name__ == "__main__":
             attempt += 1  # If it failed, try another
 
     if len(messages) == 0:
-        print("\n⚠️ There are no suggested confirmation messages!\n")
+        safe_print("\n⚠️ There are no suggested confirmation messages!\n")
         exit(1)
 
-    print("\n📝 Suggested Commit Message:\n")
+    safe_print("\n📝 Suggested Commit Message:\n")
     for idx, (provider, model, msg, usage, elapsed) in enumerate(messages, 1):
         strIdx = str(idx)
         cols = columns - len(strIdx) - 4
-        print(f"[ {strIdx} ]{'-' * cols}")
-        print(msg)
+        safe_print(f"[ {strIdx} ]{'-' * cols}")
+        safe_print(msg)
         if usage:
-            print("-" * columns)
-            print(format_usage(usage))
-        print("=" * columns)
+            safe_print("-" * columns)
+            safe_print(format_usage(usage))
+        safe_print("=" * columns)
 
     if USE_CONFIRM:
         options = len(messages)
@@ -333,21 +345,19 @@ if __name__ == "__main__":
                 message = messages[val - 1][2]
                 break
             if val == 0:
-                print("🚫 Commit canceled by user.")
+                safe_print("🚫 Commit canceled by user.")
                 sys.exit(0)
 
     if not has_staged_changes():
-        print("ℹ️ No changes staged. Running: git add .")
+        safe_print("ℹ️ No changes staged. Running: git add .")
         subprocess.run(["git", "add", "."], check=True)
 
     try:
         subprocess.run(["git", "commit", "-m", message], check=True)
-        print("✅ Commit successfully completed.")
+        safe_print("✅ Commit successfully completed.")
 
         if SAVE_HISTORY:
             save_to_history(message, HISTORY_PATH)
 
-        amend_commit_message()
-
     except subprocess.CalledProcessError as e:
-        print("❌ Error executing git commit:", e)
+        safe_print(f"❌ Error executing git commit: {e}")

@@ -19,6 +19,15 @@ random.seed(secrets.randbits(64))
 BLACKLIST_PATH = os.path.join(os.path.dirname(__file__), "blacklist.txt")
 
 
+def safe_print(message, **kwargs):
+    try:
+        print(message, **kwargs)
+    except UnicodeEncodeError:
+        fallback = message.encode("ascii", errors="ignore").decode("ascii")
+        print(fallback or "[message could not be displayed in this terminal]",
+              **kwargs)
+
+
 def load_blacklist(filename=BLACKLIST_PATH):
     if not os.path.exists(filename):
         return set()
@@ -65,7 +74,7 @@ def list_free_models(selection="FreeAll", top_n=5):
         return []
 
     if DEBUG:
-        print(f"🔍 Free models found: {len(free)}")
+        safe_print(f"🔍 Free models found: {len(free)}")
 
     detailed_models = []
     for m in free:
@@ -83,14 +92,14 @@ def list_free_models(selection="FreeAll", top_n=5):
         })
 
         if DEBUG:
-            print(f'🧠 Model: {model_id}')
+            safe_print(f'🧠 Model: {model_id}')
             # print(f'🗨️ Description: {m.get("description", "")}…')  # [:60]
-            print(f'📦 Params: {size}M')
-            print(f'🧵 CTX: {context}\n')
+            safe_print(f'📦 Params: {size}M')
+            safe_print(f'🧵 CTX: {context}\n')
 
     if not detailed_models:
-        print("⚠️ There are no valid models "
-              "available after applying blacklist.")
+        safe_print("⚠️ There are no valid models "
+                   "available after applying blacklist.")
         return []
 
     if selection == "FreeAll":
@@ -131,7 +140,8 @@ def query_with_fallback(models_to_use, prompt):
         attempted_models.add(model)
 
         start_time = time.time()
-        print(f"🔍 Consulting 🤖 {provider} 🧠 {model}...", end='', flush=True)
+        safe_print(f"🔍 Consulting 🤖 {provider} 🧠 {model}...",
+                   end='', flush=True)
 
         try:
             response = requests.post(
@@ -151,7 +161,7 @@ def query_with_fallback(models_to_use, prompt):
             code = response.status_code
 
             if code == 200:
-                print("✅")
+                safe_print("✅")
                 data = response.json()
                 content = data["choices"][0]["message"]["content"].strip()
                 usage_data = data.get("usage", {})
@@ -167,19 +177,19 @@ def query_with_fallback(models_to_use, prompt):
             # print(f"❌ ({code}: {error})")
 
             elif response.status_code == 404:
-                print(f"🚫 Model not fount (404): {model}")
+                safe_print(f"🚫 Model not fount (404): {model}")
                 save_to_blacklist(model)
                 continue  # Try the following model
 
             else:
-                print(f"❌ Error {code} with model {model}")
+                safe_print(f"❌ Error {code} with model {model}")
                 continue
 
         except Exception as e:
-            print(f"❌ Exception with model {model}: {e}")
+            safe_print(f"❌ Exception with model {model}: {e}")
             continue
 
-    print("❌ No valid model responded.")
+    safe_print("❌ No valid model responded.")
     return 666, None, "No response could be obtained from any model.", None, 0
 
 
@@ -192,9 +202,8 @@ def query_model(prompt):
 
     if model in keywords:
         models_to_use = list_free_models(model)
-        # print("models_to_use -> ", models_to_use)
-        model = random.choice(models_to_use)
-        # print("model ->", model)
+        if not models_to_use:
+            return 503, None, "No OpenRouter models available.", None, 0
     else:
         models_to_use = [model]
 
@@ -208,17 +217,17 @@ if __name__ == "__main__":
     argv = sys.argv[1:]
     if len(argv) > 0 and argv[0] == "list":
         free_models = list_free_models()
-        print("Free models:")
-        print("------------")
+        safe_print("Free models:")
+        safe_print("------------")
         for model in free_models:
-            print(model)
+            safe_print(model)
         exit(0)
     env, emoji = detect_environment()
     prompt = "What is the meaning of life?"
     code, model, content, usage, elapsed_time = query_model(prompt)
-    print(f"🌐 Code: {code}")
-    print(f"🧠 Model: {model}")
-    print(f"💬 Response: {content}")
-    print(f"📊 Usage: {usage}")
+    safe_print(f"🌐 Code: {code}")
+    safe_print(f"🧠 Model: {model}")
+    safe_print(f"💬 Response: {content}")
+    safe_print(f"📊 Usage: {usage}")
     fix = " " if env == "MACOS" else ""
-    print(f"⏱️{fix} Elapsed time: {elapsed_time:.2f} seconds")
+    safe_print(f"⏱️{fix} Elapsed time: {elapsed_time:.2f} seconds")
