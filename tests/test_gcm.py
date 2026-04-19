@@ -207,19 +207,20 @@ class GcmTests(unittest.TestCase):
         )
         plan = ExecutionPlan(generators=[generator], judge=judge, refiner=None)
 
-        entry = gcm.create_history_entry(
-            final_message="final commit message",
-            selected_index=1,
-            displayed_messages=[
-                ("Codex", "gpt-5-codex", "formatted message", None, 1.5)
-            ],
-            candidates=[candidate],
-            selected_candidate=candidate,
-            plan=plan,
-            prompt="prompt body",
-            diff_summary="Staged: 1 file changed",
-            user_note="note",
-        )
+        with patch("gcm.detect_environment", return_value=("WINDOWS", "🪟")):
+            entry = gcm.create_history_entry(
+                final_message="final commit message",
+                selected_index=1,
+                displayed_messages=[
+                    ("Codex", "gpt-5-codex", "formatted message", None, 1.5)
+                ],
+                candidates=[candidate],
+                selected_candidate=candidate,
+                plan=plan,
+                prompt="prompt body",
+                diff_summary="Staged: 1 file changed",
+                user_note="note",
+            )
 
         self.assertEqual(entry["selected_candidate"]["provider"], "Codex")
         self.assertEqual(entry["plan"]["generators"], ["OpenAI"])

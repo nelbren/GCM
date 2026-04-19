@@ -461,10 +461,10 @@ def confirm_stage_all_changes():
     while True:
         confirm = input(
             "\n⚠️ No changes are staged. Stage all detected changes with "
-            "'git add .' and continue? (y/n): "
+            "'git add .' and continue? [Y/n]: "
         ).strip().lower()
 
-        if confirm in {"y", "yes"}:
+        if confirm in {"", "y", "yes"}:
             safe_print("ℹ️ Running: git add .")
             run_git_command(["add", "."], check=True)
             return

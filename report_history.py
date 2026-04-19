@@ -212,22 +212,76 @@ def parse_elapsed_from_commit_message(message):
 
 def load_git_log_messages(project_path):
     safe_path = os.path.abspath(project_path)
-    result = subprocess.run(
-        [
-            "git",
-            "-c",
-            f"safe.directory={safe_path}",
-            "log",
-            "--pretty=format:%B%x1e",
-        ],
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        check=True,
-        cwd=project_path,
-    )
+    try:
+        result = subprocess.run(
+            [
+                "git",
+                "-c",
+                f"safe.directory={safe_path}",
+                "log",
+                "--pretty=format:%B%x1e",
+            ],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=True,
+            cwd=project_path,
+        )
+    except subprocess.CalledProcessError as exc:
+        stderr = (exc.stderr or "").lower()
+        if "does not have any commits yet" in stderr:
+            return []
+        raise
     return [message.strip() for message in result.stdout.split("\x1e") if message.strip()]
+
+
+def build_git_log_entry(project_path, message):
+    normalized_path = os.path.abspath(project_path)
+    project_name = os.path.basename(normalized_path) or normalized_path
+    provider = parse_provider_from_commit_message(message)
+    elapsed = parse_elapsed_from_commit_message(message)
+
+    displayed_messages = []
+    selected_candidate = {}
+    if provider:
+        displayed_messages.append({"provider": provider, "elapsed": elapsed})
+        selected_candidate["provider"] = provider
+        if isinstance(elapsed, (int, float)):
+            selected_candidate["elapsed"] = elapsed
+
+    return {
+        "os": parse_os_from_commit_message(message),
+        "outcome": "committed",
+        "project": {
+            "name": project_name,
+            "path": normalized_path,
+        },
+        "final_message": message,
+        "selected_candidate": selected_candidate,
+        "displayed_messages": displayed_messages,
+    }
+
+
+def load_git_log_entries(project_paths):
+    entries = []
+    seen_paths = set()
+
+    for project_path in project_paths:
+        normalized_path = os.path.abspath(project_path)
+        if normalized_path in seen_paths:
+            continue
+        seen_paths.add(normalized_path)
+
+        try:
+            log_messages = load_git_log_messages(normalized_path)
+        except (OSError, subprocess.SubprocessError):
+            continue
+
+        for message in log_messages:
+            entries.append(build_git_log_entry(normalized_path, message))
+
+    return entries
 
 
 def summarize_selected_commits(entries, summary):
@@ -367,11 +421,10 @@ def collect_project_paths_from_entries(entries):
         project_path = get_project_path(entry)
         if not project_path:
             continue
-        normalized = os.path.abspath(project_path)
-        if normalized in seen_paths:
+        if project_path in seen_paths:
             continue
-        seen_paths.add(normalized)
-        project_paths.append(normalized)
+        seen_paths.add(project_path)
+        project_paths.append(project_path)
 
     return project_paths
 
@@ -449,11 +502,13 @@ def build_overview_summary(entries, project_path=None, project_name=None):
     for entry in entries:
         entry_project_name = get_project_name(entry)
         entry_project_path = get_project_path(entry)
-        entry_project_path = os.path.abspath(entry_project_path) if entry_project_path else None
+        entry_project_path_normalized = (
+            os.path.abspath(entry_project_path) if entry_project_path else None
+        )
 
         matches_project = True
         if normalized_path:
-            matches_project = entry_project_path == normalized_path
+            matches_project = entry_project_path_normalized == normalized_path
         elif project_name:
             matches_project = entry_project_name == project_name
 
@@ -472,7 +527,7 @@ def build_overview_summary(entries, project_path=None, project_name=None):
         else:
             overview["total_commits"] += 1
 
-    scope_paths = [normalized_path] if normalized_path else filtered_project_paths
+    scope_paths = [project_path] if project_path else filtered_project_paths
     os_summary = summarize_os_for_scope(filtered_entries, scope_paths)
     overview["runs_by_os"] = os_summary["runs_by_os"]
     overview["os_total_runs"] = os_summary["os_total_runs"]
@@ -878,15 +933,19 @@ def main():
     config = load_config()
     history_path = config.get("history_json_path", "~/.gcm_history.jsonl")
     entries = load_history_entries(history_path)
-
-    if not entries:
-        print(f"No structured history found at {os.path.expanduser(history_path)}")
-        return 1
-
-    summary = summarize_entries(entries)
     current_project_path = os.path.abspath(os.getcwd())
     current_project_name = os.path.basename(current_project_path) or current_project_path
     registered_repos = load_registered_repos()
+
+    if not entries:
+        git_log_paths = [current_project_path, *registered_repos]
+        entries = load_git_log_entries(git_log_paths)
+        if not entries:
+            print(f"No structured history found at {os.path.expanduser(history_path)}")
+            print("No git history found for the current or registered repositories.")
+            return 0
+
+    summary = summarize_entries(entries)
     global_overview = build_global_overview(entries, registered_repos)
     project_overview = build_overview_summary(
         entries,

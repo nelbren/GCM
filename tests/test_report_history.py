@@ -456,6 +456,70 @@ class ReportHistoryTests(unittest.TestCase):
         self.assertNotIn("WINDOWS", summary["runs_by_os"])
         self.assertEqual(summary["os_total_runs"], 1)
 
+    @patch("report_history.render_summary")
+    @patch("report_history.load_registered_repos")
+    @patch("report_history.load_git_log_entries")
+    @patch("report_history.load_history_entries")
+    @patch("report_history.load_config")
+    def test_main_falls_back_to_git_log_when_structured_history_is_missing(
+        self,
+        load_config_mock,
+        load_history_entries_mock,
+        load_git_log_entries_mock,
+        load_registered_repos_mock,
+        render_summary_mock,
+    ):
+        load_config_mock.return_value = {"history_json_path": "~/.missing.jsonl"}
+        load_history_entries_mock.return_value = []
+        load_registered_repos_mock.return_value = [os.path.abspath("/tmp/Other")]
+        load_git_log_entries_mock.return_value = [
+            {
+                "os": "LINUX",
+                "outcome": "committed",
+                "project": {"name": "GCM", "path": os.path.abspath(os.getcwd())},
+                "final_message": (
+                    "[💻builder🐧] 🔀: update report\n"
+                    "   🤖: Codex 🧠: gpt-5-codex\n"
+                    "   🌐: LINUX | ⏱️: 4.20 secs"
+                ),
+                "selected_candidate": {"provider": "Codex", "elapsed": 4.2},
+                "displayed_messages": [{"provider": "Codex", "elapsed": 4.2}],
+            },
+        ]
+
+        exit_code = report_history.main()
+
+        self.assertEqual(exit_code, 0)
+        load_git_log_entries_mock.assert_called_once()
+        git_log_paths = load_git_log_entries_mock.call_args[0][0]
+        self.assertEqual(git_log_paths[0], os.path.abspath(os.getcwd()))
+        self.assertIn(os.path.abspath("/tmp/Other"), git_log_paths)
+        render_summary_mock.assert_called_once()
+
+    @patch("report_history.load_registered_repos")
+    @patch("report_history.load_git_log_entries")
+    @patch("report_history.load_history_entries")
+    @patch("report_history.load_config")
+    def test_main_exits_cleanly_when_no_structured_or_git_history(
+        self,
+        load_config_mock,
+        load_history_entries_mock,
+        load_git_log_entries_mock,
+        load_registered_repos_mock,
+    ):
+        load_config_mock.return_value = {"history_json_path": "~/.missing.jsonl"}
+        load_history_entries_mock.return_value = []
+        load_git_log_entries_mock.return_value = []
+        load_registered_repos_mock.return_value = []
+
+        with patch("sys.stdout", new=StringIO()) as stdout:
+            exit_code = report_history.main()
+
+        output = stdout.getvalue()
+        self.assertEqual(exit_code, 0)
+        self.assertIn("No structured history found", output)
+        self.assertIn("No git history found", output)
+
 
 if __name__ == "__main__":
     unittest.main()

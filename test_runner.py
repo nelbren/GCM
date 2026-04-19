@@ -4,9 +4,14 @@ import io
 import sys
 import unittest
 
-from rich.console import Console
-from rich.panel import Panel
-from rich.text import Text
+RICH_IMPORT_ERROR = None
+
+try:
+    from rich.console import Console
+    from rich.panel import Panel
+    from rich.text import Text
+except ImportError as exc:
+    RICH_IMPORT_ERROR = exc
 
 
 TEST_SUMMARY_ROWS = (
@@ -163,6 +168,15 @@ def main():
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     if hasattr(sys.stderr, "reconfigure"):
         sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
+    if RICH_IMPORT_ERROR is not None:
+        print(
+            "Warning: missing Python dependencies required to run tests.\n"
+            "Use `./install.bash` to install the necessary dependencies.\n"
+            f"Import error: {RICH_IMPORT_ERROR}",
+            file=sys.stderr,
+        )
+        return 1
 
     console = Console(stderr=False, emoji=True)
     loader = unittest.defaultTestLoader
