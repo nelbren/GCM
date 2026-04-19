@@ -6,7 +6,7 @@ for provider in OpenRouter OpenAI Codex Claude Ollama; do
     SECRET_FILE="${SCRIPT_DIR}/apis/${provider}/secret.bash"
 
     if [ -f "$SECRET_FILE" ]; then
-        echo "🔐 Setting Keys for ${provider} Secret File..."
+        echo "🔐Setting Keys for ${provider} Secret File..."
         source "$SECRET_FILE"
     fi
 done

@@ -5,6 +5,7 @@
 import os
 import sys
 import json
+import re
 import yaml
 import shutil
 import socket
@@ -17,6 +18,17 @@ from version import load_version_config, update_version_file
 from apis.registry import get_available_provider_pairs, discover_available_providers
 from apis.orchestrator import build_execution_plan, run_generators, \
                               run_judge, run_refiner
+
+try:
+    from rich.console import Console
+    from rich.panel import Panel
+    from rich.text import Text
+    HAS_RICH = True
+except ImportError:
+    HAS_RICH = False
+    Console = None
+    Panel = None
+    Text = None
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -60,11 +72,13 @@ EMOJIS = config.get("emojis", {
     "change": "📝",
     "delete": "🗑️",
     "info": "ℹ️",
-    "summary": "🎯"
+    "summary": "🎯",
+    "test": "🧪"
 })
 
 PROMPT_TEMPLATE = config.get("prompt_template", "")
 columns = shutil.get_terminal_size().columns
+RICH_CONSOLE = Console() if HAS_RICH else None
 
 
 def safe_print(message):
@@ -73,6 +87,57 @@ def safe_print(message):
     except UnicodeEncodeError:
         fallback = message.encode("ascii", errors="ignore").decode("ascii")
         print(fallback or "[message could not be displayed in this terminal]")
+
+
+def build_commit_option_title(index, provider, model=None, recommended=False):
+    title = f"✍️ Option {index} · 🤖 {provider}"
+    if model:
+        title = f"{title} · 🧠 {model}"
+    if recommended:
+        title = f"{title} · 🏆 Recommended"
+    return title
+
+
+def render_commit_options(messages, recommended_index=None):
+    if not HAS_RICH:
+        safe_print("\n📝 Suggested Commit Message:\n")
+        for idx, (provider, model, msg, usage, elapsed) in enumerate(messages, 1):
+            option_label = f"[ {idx} ] {provider}"
+            if model:
+                option_label = f"{option_label} ({model})"
+            if idx == recommended_index:
+                option_label = f"{option_label} [Recommended]"
+            cols = max(columns - len(option_label), 1)
+            safe_print(f"{option_label}{'-' * cols}")
+            safe_print(msg)
+            if usage:
+                safe_print("-" * columns)
+                safe_print(format_usage(usage))
+            safe_print("=" * columns)
+        return
+
+    RICH_CONSOLE.print()
+    RICH_CONSOLE.print(
+        Panel.fit("📝 Suggested Commit Messages", border_style="cyan")
+    )
+
+    for idx, (provider, model, msg, usage, elapsed) in enumerate(messages, 1):
+        is_recommended = idx == recommended_index
+        body = Text(msg)
+        if usage:
+            body.append("\n\n")
+            body.append(format_usage(usage), style="dim")
+        body.append("\n")
+        body.append(f"⏱️ Elapsed: {elapsed:.2f} secs", style="dim")
+        RICH_CONSOLE.print(
+            Panel(
+                body,
+                title=build_commit_option_title(
+                    idx, provider, model, recommended=is_recommended
+                ),
+                border_style="green" if is_recommended else "blue",
+            )
+        )
 
 
 def is_git_repo():
@@ -137,6 +202,27 @@ def format_file_list(file_list):
     return ", ".join(quoted_files[:-1]) + " and " + quoted_files[-1]
 
 
+def format_count_label(count, noun="file"):
+    suffix = "" if count == 1 else "s"
+    return f"{count} {noun}{suffix}"
+
+
+def build_change_rollup_summary(changes):
+    sections = []
+    labels = {
+        "Add": EMOJIS.get("add", "Add"),
+        "Change": EMOJIS.get("change", "Change"),
+        "Delete": EMOJIS.get("delete", "Delete"),
+    }
+
+    for key in ("Add", "Change", "Delete"):
+        files = changes.get(key, [])
+        if files:
+            sections.append(f"{labels[key]}: {format_count_label(len(files))}")
+
+    return "; ".join(sections)
+
+
 def classify_changes(lines):
     changes = {"Add": [], "Change": [], "Delete": []}
     for line in lines:
@@ -165,6 +251,50 @@ def build_prompt(changes, diff_summary="", note=""):
         diff=diff_summary or "No diff available."
     )
     return prompt_filled
+
+
+def contains_file_reference(text):
+    patterns = [
+        r'["\'][^"\']+\.[A-Za-z0-9]{1,10}["\']',
+        r"\b[\w.-]+\.[A-Za-z0-9]{1,10}\b",
+        r"(?:[A-Za-z]:)?[\\/][\w .-]+(?:[\\/][\w .-]+)+",
+    ]
+    return any(re.search(pattern, text) for pattern in patterns)
+
+
+def sanitize_suggestion_line(line):
+    sanitized = line.strip()
+    if not sanitized:
+        return sanitized
+
+    if not contains_file_reference(sanitized):
+        return sanitized
+
+    prefix_match = re.match(r"^([^:]{1,20}:)\s*", sanitized)
+    if prefix_match:
+        return (
+            f"{prefix_match.group(1)} summarize repository changes "
+            "without listing files."
+        )
+
+    return "summarize repository changes without listing files."
+
+
+def apply_commit_line_replacements(line):
+    replacements = {
+        r"chore:": "🧹:",
+        r"feat:": "✨:",
+        r"fix:": "🛠️:",
+        r"docs:": "📄:",
+        r"refactor:": "🔧:",
+        r"test:": "🧪:",
+        r"unstaged:": "⚠️:",
+    }
+
+    updated_line = line
+    for pattern, value in replacements.items():
+        updated_line = re.sub(pattern, value, updated_line, flags=re.IGNORECASE)
+    return updated_line
 
 
 def get_location():
@@ -200,18 +330,9 @@ def build_commit_message(env, emoji, machine, summary,
         "Modified", "added", "deleted"
     }
 
-    replacements = {
-        "chore:": "🧹:",
-        "feat:": "✨:",
-        "fix:": "🛠️:",
-        "docs:": "📄",
-        "refactor:": "🔧"
-    }
-
     for line in suggestion.splitlines():
-        for key, value in replacements.items():
-            if key in line:
-                line = line.replace(key, value)
+        line = apply_commit_line_replacements(line)
+        line = sanitize_suggestion_line(line)
         if line.strip():
             emoji2 = EMOJIS.get("summary") if any(
                 word in line for word in keywords) else EMOJIS.get("info")
@@ -220,6 +341,7 @@ def build_commit_message(env, emoji, machine, summary,
     if diff_summary and diff_summary not in suggestion:
         for line in diff_summary.splitlines():
             if line.strip():
+                line = apply_commit_line_replacements(line)
                 lines.append(f"{padding}{EMOJIS.get('summary')}: {line}")
 
     commit_count = get_commit_count() + 1
@@ -264,9 +386,10 @@ def get_project_metadata():
 
 def create_history_entry(final_message, selected_index, displayed_messages,
                          candidates, selected_candidate, plan, prompt,
-                         diff_summary, user_note):
+                         diff_summary, user_note, outcome="committed"):
     return {
         "timestamp": datetime.now().isoformat(timespec="milliseconds"),
+        "outcome": outcome,
         "project": get_project_metadata(),
         "selected_index": selected_index,
         "user_note": user_note,
@@ -372,10 +495,7 @@ if __name__ == "__main__":
         safe_print(f"🔖 Version: {version}")
 
     diff_summary = get_git_diff_summary()
-    summary = "; ".join(
-        f"{EMOJIS.get(key.lower(), '')}: {format_file_list(v)}"
-        for key, v in changes.items() if v
-    )
+    summary = build_change_rollup_summary(changes)
 
     user_note = sys.argv[1] if len(sys.argv) > 1 else "None"
 
@@ -448,19 +568,20 @@ if __name__ == "__main__":
         safe_print("\n⚠️ There are no suggested confirmation messages!\n")
         exit(1)
 
-    safe_print("\n📝 Suggested Commit Message:\n")
-    for idx, (provider, model, msg, usage, elapsed) in enumerate(messages, 1):
-        strIdx = str(idx)
-        option_label = f"[ {strIdx} ] {provider}"
-        if model:
-            option_label = f"{option_label} ({model})"
-        cols = max(columns - len(option_label), 1)
-        safe_print(f"{option_label}{'-' * cols}")
-        safe_print(msg)
-        if usage:
-            safe_print("-" * columns)
-            safe_print(format_usage(usage))
-        safe_print("=" * columns)
+    recommended_index = None
+    if selected_candidate:
+        selected_message = build_commit_message(
+            env, emoji, machine_name, summary,
+            selected_candidate.content, diff_summary,
+            selected_candidate.provider, selected_candidate.model,
+            selected_candidate.elapsed
+        )
+        for idx, (_, _, msg, _, _) in enumerate(messages, 1):
+            if msg == selected_message:
+                recommended_index = idx
+                break
+
+    render_commit_options(messages, recommended_index=recommended_index)
 
     if USE_CONFIRM:
         options = len(messages)
@@ -481,6 +602,20 @@ if __name__ == "__main__":
                 message = messages[val - 1][2]
                 break
             if val == 0:
+                if SAVE_HISTORY:
+                    history_entry = create_history_entry(
+                        final_message="",
+                        selected_index=0,
+                        displayed_messages=messages,
+                        candidates=ordered_candidates,
+                        selected_candidate=selected_candidate,
+                        plan=plan,
+                        prompt=prompt,
+                        diff_summary=diff_summary,
+                        user_note=user_note,
+                        outcome="canceled",
+                    )
+                    save_history_entry(history_entry, HISTORY_JSON_PATH)
                 safe_print("🚫 Commit canceled by user.")
                 sys.exit(0)
     else:
@@ -506,6 +641,7 @@ if __name__ == "__main__":
                 prompt=prompt,
                 diff_summary=diff_summary,
                 user_note=user_note,
+                outcome="committed",
             )
             save_history_entry(history_entry, HISTORY_JSON_PATH)
 

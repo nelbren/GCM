@@ -69,10 +69,13 @@ def get_project_name(entry):
 
 def summarize_entries(entries):
     summary = {
-        "total_commits": len(entries),
+        "total_runs": len(entries),
+        "total_commits": 0,
+        "total_canceled": 0,
         "projects": set(),
         "selection_by_project_provider": defaultdict(int),
         "displayed_by_project_provider": defaultdict(int),
+        "canceled_displayed_by_project_provider": defaultdict(int),
         "judge_usage_by_project_provider": defaultdict(int),
         "refiner_usage_by_project_provider": defaultdict(int),
         "generator_usage_by_project_provider": defaultdict(int),
@@ -84,11 +87,19 @@ def summarize_entries(entries):
     for entry in entries:
         project_name = get_project_name(entry)
         summary["projects"].add(project_name)
+        outcome = entry.get("outcome", "committed")
+        is_committed = outcome != "canceled"
+
+        if is_committed:
+            summary["total_commits"] += 1
+        else:
+            summary["total_canceled"] += 1
+
         selected_candidate = entry.get("selected_candidate") or {}
         selected_provider = selected_candidate.get("provider")
         selected_elapsed = selected_candidate.get("elapsed")
 
-        if selected_provider:
+        if is_committed and selected_provider:
             key = (project_name, selected_provider)
             summary["selection_by_project_provider"][key] += 1
             if isinstance(selected_elapsed, (int, float)):
@@ -119,6 +130,8 @@ def summarize_entries(entries):
                 continue
             key = (project_name, provider)
             summary["displayed_by_project_provider"][key] += 1
+            if not is_committed:
+                summary["canceled_displayed_by_project_provider"][key] += 1
             if isinstance(elapsed, (int, float)):
                 summary["avg_displayed_elapsed_by_project_provider"][key].append(elapsed)
 
@@ -142,8 +155,10 @@ def compute_provider_rows(summary):
         key = (project_name, provider)
         selected = summary["selection_by_project_provider"].get(key, 0)
         displayed = summary["displayed_by_project_provider"].get(key, 0)
+        canceled_shown = summary["canceled_displayed_by_project_provider"].get(key, 0)
         acceptance_vs_commits = safe_pct(selected, total_commits)
         acceptance_vs_shown = safe_pct(selected, displayed)
+        cancel_vs_shown = safe_pct(canceled_shown, displayed)
         avg_selected = _avg(summary["avg_selected_elapsed_by_project_provider"].get(key, []))
         avg_displayed = _avg(summary["avg_displayed_elapsed_by_project_provider"].get(key, []))
 
@@ -152,8 +167,10 @@ def compute_provider_rows(summary):
             "provider": provider,
             "selected": selected,
             "displayed": displayed,
+            "canceled_shown": canceled_shown,
             "acceptance_vs_commits": acceptance_vs_commits,
             "acceptance_vs_shown": acceptance_vs_shown,
+            "cancel_vs_shown": cancel_vs_shown,
             "avg_selected": avg_selected,
             "avg_displayed": avg_displayed,
             "generator_usage": summary["generator_usage_by_project_provider"].get(key, 0),
@@ -207,7 +224,9 @@ def render_summary(entries, summary, provider_rows):
 
 def _render_rich_summary(entries, summary, provider_rows):
     console = Console()
+    total_runs = summary["total_runs"]
     total_commits = summary["total_commits"]
+    total_canceled = summary["total_canceled"]
     total_projects = len(summary["projects"])
     top_label = (
         f"{provider_rows[0]['project']} / {provider_rows[0]['provider']}"
@@ -216,8 +235,12 @@ def _render_rich_summary(entries, summary, provider_rows):
     top_rate = provider_rows[0]["acceptance_vs_shown"] if provider_rows else 0.0
 
     overview = Text()
-    overview.append("Commits analyzed: ", style="bold")
+    overview.append("Runs analyzed: ", style="bold")
+    overview.append(str(total_runs), style="cyan")
+    overview.append("\nCommits completed: ", style="bold")
     overview.append(str(total_commits), style="cyan")
+    overview.append("\nCanceled runs: ", style="bold")
+    overview.append(str(total_canceled), style="cyan")
     overview.append("\nProjects found: ", style="bold")
     overview.append(str(total_projects), style="cyan")
     overview.append("\nTop accepted project/provider: ", style="bold")
@@ -233,6 +256,7 @@ def _render_rich_summary(entries, summary, provider_rows):
     provider_table.add_column("Selected", justify="right")
     provider_table.add_column("Shown", justify="right")
     provider_table.add_column("Accept/Shown", justify="right")
+    provider_table.add_column("Cancel/Shown", justify="right")
     provider_table.add_column("Accept/Commits", justify="right")
     provider_table.add_column("Avg Selected", justify="right")
     provider_table.add_column("Avg Shown", justify="right")
@@ -248,6 +272,7 @@ def _render_rich_summary(entries, summary, provider_rows):
             str(row["displayed"]),
             f"[{get_acceptance_style(row['acceptance_vs_shown'])}]"
             f"{format_pct(row['acceptance_vs_shown'])}[/{get_acceptance_style(row['acceptance_vs_shown'])}]",
+            format_pct(row["cancel_vs_shown"]),
             format_pct(row["acceptance_vs_commits"]),
             format_seconds(row["avg_selected"]),
             format_seconds(row["avg_displayed"]),
@@ -262,7 +287,7 @@ def _render_rich_summary(entries, summary, provider_rows):
     idx_table.add_column("Count", justify="right")
     idx_table.add_column("Rate", justify="right")
     for choice, count in sorted(summary["selected_indexes"].items(), key=lambda item: int(item[0])):
-        idx_table.add_row(choice, str(count), format_pct(safe_pct(count, total_commits)))
+        idx_table.add_row(choice, str(count), format_pct(safe_pct(count, total_runs)))
     console.print(idx_table)
 
 
@@ -277,7 +302,9 @@ def _render_plain_summary(entries, summary, provider_rows):
         print(f"Import error: {RICH_IMPORT_ERROR}")
         print("Tip: run install.bat to install missing dependencies into .venv.")
         print()
-    print(f"Commits analyzed: {summary['total_commits']}")
+    print(f"Runs analyzed: {summary['total_runs']}")
+    print(f"Commits completed: {summary['total_commits']}")
+    print(f"Canceled runs: {summary['total_canceled']}")
     print(f"Projects found: {len(summary['projects'])}")
     if provider_rows:
         print(
@@ -294,6 +321,7 @@ def _render_plain_summary(entries, summary, provider_rows):
         "Selected",
         "Shown",
         "Accept/Shown",
+        "Cancel/Shown",
         "Accept/Commits",
         "Avg Selected",
         "Avg Shown",
@@ -308,6 +336,7 @@ def _render_plain_summary(entries, summary, provider_rows):
             str(row["selected"]),
             str(row["displayed"]),
             format_pct(row["acceptance_vs_shown"]),
+            format_pct(row["cancel_vs_shown"]),
             format_pct(row["acceptance_vs_commits"]),
             format_seconds(row["avg_selected"]),
             format_seconds(row["avg_displayed"]),
@@ -326,7 +355,7 @@ def _render_plain_summary(entries, summary, provider_rows):
         [
             choice,
             str(count),
-            format_pct(safe_pct(count, summary["total_commits"])),
+            format_pct(safe_pct(count, summary["total_runs"])),
         ]
         for choice, count in sorted(
             summary["selected_indexes"].items(), key=lambda item: int(item[0])

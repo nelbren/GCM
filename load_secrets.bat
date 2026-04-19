@@ -30,5 +30,5 @@ if exist "%SCRIPT_DIR%apis\Ollama\secret.bat" (
 exit /b 0
 
 :print_info
-powershell -NoProfile -Command "Write-Host ([char]::ConvertFromUtf32(0x1F510) + ' ' + $args[0])" -- %~1
+powershell -NoProfile -Command "Write-Host ([char]::ConvertFromUtf32(0x1F510) + $args[0])" -- %~1
 exit /b 0

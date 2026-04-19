@@ -72,6 +72,8 @@ GCM/
 ├── install.bash
 ├── run.bat
 ├── run.bash
+├── test.bat
+├── test.bash
 ├── config.yml
 ├── requirements.txt
 ├── version.cfg
@@ -192,6 +194,21 @@ For convenience, `apis/Codex/secret.bat` and `apis/Codex/secret.bash` default `C
 
 - 📸 Part 2/2
   ![](images/002.png)
+
+---
+
+## ✅ Running Tests
+
+Run the bundled test launcher for your shell:
+
+- `test.bat` on Windows CMD or PowerShell
+- `./test.bash` on Linux, macOS, Cygwin, or Git Bash
+
+Both scripts execute the same suite:
+
+```bash
+python -m unittest discover -s tests -q
+```
 
 ---
 
@@ -542,4 +559,9 @@ Prompt engineering, code generation, emoji madness, and technical fine-tuning po
 ## 📄 License
 
 MIT License *(or specify your preferred license here)*
+
+<!-- markdownlint-disable MD033 -->
+<div style="text-align: right; font-size: 12px;">
+📆 2026-04-18 23:41:50 🪟
+</div>
 
