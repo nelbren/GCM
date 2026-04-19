@@ -26,7 +26,7 @@ gcm_require_repo_python() {
     local python_bin
 
     python_bin="$(gcm_repo_python "$script_dir")" || {
-        echo "❌ Virtual environment .venv not found. Run install.bat first."
+        echo "? Virtual environment .venv not found. Run install.bat first."
         return 1
     }
 
@@ -37,15 +37,24 @@ gcm_source_provider_secrets() {
     local script_dir="$1"
     local base_dir="${script_dir}/apis"
     local dir
+    local provider_dir
     local secret_file
 
     for dir in "$base_dir"/*/; do
+        [ -d "$dir" ] || continue
+
+        provider_dir="$(basename "$dir")"
+
+        case "$provider_dir" in
+            __pycache__|__*__)
+                continue
+                ;;
+        esac
+
         secret_file="${dir}secret.bash"
 
         if [ ! -f "$secret_file" ]; then
-            echo "❌ $secret_file not found. Abort."
-            echo "👉 cp $secret_file.example $secret_file"
-            return 1
+            continue
         fi
 
         source "$secret_file"

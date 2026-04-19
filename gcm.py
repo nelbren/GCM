@@ -13,7 +13,8 @@ import requests
 import subprocess
 from datetime import datetime
 from utils import detect_environment, ENVIRONMENT_EMOJI, \
-                  format_usage, get_commit_count, run_git_command
+                  format_usage, get_commit_count, normalize_os_name, \
+                  run_git_command
 from version import load_version_config, update_version_file
 from apis.registry import get_available_provider_pairs, discover_available_providers
 from apis.orchestrator import build_execution_plan, run_generators, \
@@ -388,10 +389,11 @@ def create_history_entry(final_message, selected_index, displayed_messages,
                          candidates, selected_candidate, plan, prompt,
                          diff_summary, user_note, outcome="committed"):
     environment_name, _ = detect_environment(EMOJIS)
+    history_os = normalize_os_name(environment_name)
     return {
         "timestamp": datetime.now().isoformat(timespec="milliseconds"),
         "outcome": outcome,
-        "os": environment_name,
+        "os": history_os,
         "project": get_project_metadata(),
         "selected_index": selected_index,
         "user_note": user_note,

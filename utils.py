@@ -69,6 +69,27 @@ def detect_environment(emojis=None):
         return 'UNKNOWN', emojis.get('unknown', '❓')
 
 
+def normalize_os_name(value):
+    if not value:
+        return None
+
+    normalized = str(value).strip().upper().replace(" ", "")
+    aliases = {
+        "WINDOWS": "WINDOWS",
+        "WIN": "WINDOWS",
+        "CYGWIN": "WINDOWS",
+        "GITBASH": "WINDOWS",
+        "MSYS": "WINDOWS",
+        "MINGW": "WINDOWS",
+        "LINUX": "LINUX",
+        "MACOS": "MACOS",
+        "MAC": "MACOS",
+        "DARWIN": "MACOS",
+        "OSX": "MACOS",
+    }
+    return aliases.get(normalized, normalized)
+
+
 def format_usage(usage_data):
     if not usage_data:
         return ""
