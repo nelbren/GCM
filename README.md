@@ -2,14 +2,14 @@
 
 ![Version](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/nelbren/GCM/main/.badges/version.json) ![OS Support](https://img.shields.io/badge/OS-Windows%2C%20macOS%2C%20Linux-success?style=flat-square) ![Environment](https://img.shields.io/badge/ENV-CMD%2C%20PowerShell%2C%20Cygwin%2C%20Bash-success?style=flat-square) ![Ollama](https://img.shields.io/badge/Ollama-✓-green?style=flat-square)  ![OpenAI](https://img.shields.io/badge/OpenAI-✓-green?style=flat-square) ![OpenRouter](https://img.shields.io/badge/OpenRouter-✓-green?style=flat-square)
 
-**GCM** (**G**it **C**ommit **M**essage Generator) is a cross-platform tool designed to help developers craft professional and consistent Git commit messages by leveraging AI (ChatGPT or Ollama) combined with real-time **`git status`** and **`git diff`** analysis.
+**GCM** (**G**it **C**ommit **M**essage Generator) is a cross-platform tool designed to help developers craft professional and consistent Git commit messages by leveraging AI providers such as **OpenAI**, **Codex**, **Claude**, **OpenRouter**, and **Ollama**, combined with real-time **`git status`** and **`git diff`** analysis.
 
 ---
 
 ## 🚀 Key Features
 
 - **AI-Powered Commit Message Generation**\
-  Uses either **ChatGPT** (via OpenAI API) or **Ollama** (local models) to generate concise and detailed commit messages based on actual changes detected in the repository.
+  Uses **OpenAI**, **Codex**, **Claude**, **OpenRouter**, or **Ollama** to generate concise and detailed commit messages based on actual changes detected in the repository.
 
 - **Environment Detection with Emoji**\
   Automatically identifies the operating system or terminal environment (**Windows 🪟, MacOS 🍎, Linux 🐧, CYGWIN 🪟**) and includes an emoji in the commit header for visual reference.
@@ -56,6 +56,12 @@ GCM/
 │   │   ├── query_model.py
 │   │   ├── secret.bash
 │   │   └── secret.bat
+│   ├── Codex/
+│   │   ├── query_model.py
+│   │   ├── secret.bash
+│   │   └── secret.bat
+│   ├── Claude/
+│   │   └── query_model.py
 │   └── Ollama/
 │       ├── query_model.py
 │       ├── secret.bash
@@ -158,6 +164,20 @@ prompt_template: |
 ```
 
 `history_json_path` stores one JSON object per committed message. This makes it easier to compare acceptance and quality across providers such as `Ollama`, `OpenRouter`, `OpenAI`, `Codex`, and `Claude`.
+
+When `history_json_path` points to a shared file under `~`, the report aggregates commits from every repository where GCM was executed. The history report now includes a `Project` column before `Provider` so that shared history remains clear without losing cross-project visibility.
+
+Provider availability is gated by both `config.yml` and environment variables:
+
+- `OpenAI` requires `OPENAI_API_KEY`
+- `Codex` requires `CODEX_API_KEY`
+- `Claude` requires `ANTHROPIC_API_KEY`
+- `OpenRouter` requires `OPENROUTER_API_KEY`
+- `Ollama` requires `OLLAMA_MODEL`
+
+The root `load_secrets.bat` and `load_secrets.bash` loaders now source provider-specific secret files for `OpenRouter`, `OpenAI`, `Codex`, `Claude`, and `Ollama`.
+
+For convenience, `apis/Codex/secret.bat` and `apis/Codex/secret.bash` default `CODEX_MODEL` to `gpt-5-codex` and reuse `OPENAI_API_KEY` as `CODEX_API_KEY` when a dedicated Codex key is not set. This makes it easy to test Codex with the current setup while still allowing an explicit `CODEX_API_KEY` override.
 
 ---
 
@@ -349,6 +369,19 @@ prompt_template: |
   - #### Environment Variable: `OPENAI_MODEL`
 
     - ###### Select specific model from **OpenAI**
+
+- ### Codex: `gpt-5-codex` or any compatible Codex-capable model.
+
+  - #### Environment Variables: `CODEX_API_KEY`, `CODEX_MODEL`
+
+  - By default, `CODEX_MODEL` falls back to `gpt-5-codex`.
+  - If `CODEX_API_KEY` is unset but `OPENAI_API_KEY` is available, the bundled Codex secret scripts reuse the OpenAI key so Codex can be tested without duplicating credentials.
+
+- ### Claude: configurable Anthropic models.
+
+  - #### Environment Variables: `ANTHROPIC_API_KEY`, `CLAUDE_MODEL`
+
+  - `CLAUDE_MODEL` defaults to `claude-3-5-sonnet-latest`.
 
 - ### OpenRouter: any free models.
 

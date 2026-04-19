@@ -2,19 +2,23 @@
 
 import json
 import os
+import shutil
 import sys
 from collections import defaultdict
 
 import yaml
 
+RICH_IMPORT_ERROR = None
+
 try:
     from rich.console import Console
-    from rich.table import Table
     from rich.panel import Panel
+    from rich.table import Table
     from rich.text import Text
     HAS_RICH = True
-except ImportError:
+except ImportError as exc:
     HAS_RICH = False
+    RICH_IMPORT_ERROR = exc
 
 
 def load_config(path=None):
@@ -49,28 +53,46 @@ def safe_pct(numerator, denominator):
     return (numerator / denominator) * 100.0
 
 
+def get_project_name(entry):
+    project = entry.get("project")
+    if isinstance(project, dict):
+        name = project.get("name")
+        if name:
+            return str(name)
+        path = project.get("path")
+        if path:
+            return os.path.basename(path) or str(path)
+    if isinstance(project, str) and project:
+        return project
+    return "(unknown)"
+
+
 def summarize_entries(entries):
     summary = {
         "total_commits": len(entries),
-        "selection_by_provider": defaultdict(int),
-        "displayed_by_provider": defaultdict(int),
-        "judge_usage": defaultdict(int),
-        "refiner_usage": defaultdict(int),
-        "generator_usage": defaultdict(int),
-        "avg_selected_elapsed": defaultdict(list),
-        "avg_displayed_elapsed": defaultdict(list),
+        "projects": set(),
+        "selection_by_project_provider": defaultdict(int),
+        "displayed_by_project_provider": defaultdict(int),
+        "judge_usage_by_project_provider": defaultdict(int),
+        "refiner_usage_by_project_provider": defaultdict(int),
+        "generator_usage_by_project_provider": defaultdict(int),
+        "avg_selected_elapsed_by_project_provider": defaultdict(list),
+        "avg_displayed_elapsed_by_project_provider": defaultdict(list),
         "selected_indexes": defaultdict(int),
     }
 
     for entry in entries:
+        project_name = get_project_name(entry)
+        summary["projects"].add(project_name)
         selected_candidate = entry.get("selected_candidate") or {}
         selected_provider = selected_candidate.get("provider")
         selected_elapsed = selected_candidate.get("elapsed")
 
         if selected_provider:
-            summary["selection_by_provider"][selected_provider] += 1
+            key = (project_name, selected_provider)
+            summary["selection_by_project_provider"][key] += 1
             if isinstance(selected_elapsed, (int, float)):
-                summary["avg_selected_elapsed"][selected_provider].append(
+                summary["avg_selected_elapsed_by_project_provider"][key].append(
                     selected_elapsed
                 )
 
@@ -80,50 +102,53 @@ def summarize_entries(entries):
 
         plan = entry.get("plan") or {}
         for provider in plan.get("generators") or []:
-            summary["generator_usage"][provider] += 1
+            summary["generator_usage_by_project_provider"][(project_name, provider)] += 1
 
         judge = plan.get("judge")
         if judge:
-            summary["judge_usage"][judge] += 1
+            summary["judge_usage_by_project_provider"][(project_name, judge)] += 1
 
         refiner = plan.get("refiner")
         if refiner:
-            summary["refiner_usage"][refiner] += 1
+            summary["refiner_usage_by_project_provider"][(project_name, refiner)] += 1
 
         for displayed in entry.get("displayed_messages") or []:
             provider = displayed.get("provider")
             elapsed = displayed.get("elapsed")
             if not provider:
                 continue
-            summary["displayed_by_provider"][provider] += 1
+            key = (project_name, provider)
+            summary["displayed_by_project_provider"][key] += 1
             if isinstance(elapsed, (int, float)):
-                summary["avg_displayed_elapsed"][provider].append(elapsed)
+                summary["avg_displayed_elapsed_by_project_provider"][key].append(elapsed)
 
     return summary
 
 
 def compute_provider_rows(summary):
-    providers = sorted({
-        *summary["selection_by_provider"].keys(),
-        *summary["displayed_by_provider"].keys(),
-        *summary["judge_usage"].keys(),
-        *summary["refiner_usage"].keys(),
-        *summary["generator_usage"].keys(),
+    project_providers = sorted({
+        *summary["selection_by_project_provider"].keys(),
+        *summary["displayed_by_project_provider"].keys(),
+        *summary["judge_usage_by_project_provider"].keys(),
+        *summary["refiner_usage_by_project_provider"].keys(),
+        *summary["generator_usage_by_project_provider"].keys(),
     })
 
     rows = []
     total_commits = summary["total_commits"]
-    total_displayed = sum(summary["displayed_by_provider"].values())
+    total_displayed = sum(summary["displayed_by_project_provider"].values())
 
-    for provider in providers:
-        selected = summary["selection_by_provider"].get(provider, 0)
-        displayed = summary["displayed_by_provider"].get(provider, 0)
+    for project_name, provider in project_providers:
+        key = (project_name, provider)
+        selected = summary["selection_by_project_provider"].get(key, 0)
+        displayed = summary["displayed_by_project_provider"].get(key, 0)
         acceptance_vs_commits = safe_pct(selected, total_commits)
         acceptance_vs_shown = safe_pct(selected, displayed)
-        avg_selected = _avg(summary["avg_selected_elapsed"].get(provider, []))
-        avg_displayed = _avg(summary["avg_displayed_elapsed"].get(provider, []))
+        avg_selected = _avg(summary["avg_selected_elapsed_by_project_provider"].get(key, []))
+        avg_displayed = _avg(summary["avg_displayed_elapsed_by_project_provider"].get(key, []))
 
         rows.append({
+            "project": project_name,
             "provider": provider,
             "selected": selected,
             "displayed": displayed,
@@ -131,9 +156,9 @@ def compute_provider_rows(summary):
             "acceptance_vs_shown": acceptance_vs_shown,
             "avg_selected": avg_selected,
             "avg_displayed": avg_displayed,
-            "generator_usage": summary["generator_usage"].get(provider, 0),
-            "judge_usage": summary["judge_usage"].get(provider, 0),
-            "refiner_usage": summary["refiner_usage"].get(provider, 0),
+            "generator_usage": summary["generator_usage_by_project_provider"].get(key, 0),
+            "judge_usage": summary["judge_usage_by_project_provider"].get(key, 0),
+            "refiner_usage": summary["refiner_usage_by_project_provider"].get(key, 0),
             "display_share": safe_pct(displayed, total_displayed),
         })
 
@@ -141,6 +166,8 @@ def compute_provider_rows(summary):
         key=lambda row: (
             -row["acceptance_vs_shown"],
             -row["selected"],
+            row["project"].lower(),
+            row["provider"].lower(),
             row["avg_selected"] if row["avg_selected"] is not None else 999999,
         )
     )
@@ -181,20 +208,27 @@ def render_summary(entries, summary, provider_rows):
 def _render_rich_summary(entries, summary, provider_rows):
     console = Console()
     total_commits = summary["total_commits"]
-    top_provider = provider_rows[0]["provider"] if provider_rows else "N/A"
+    total_projects = len(summary["projects"])
+    top_label = (
+        f"{provider_rows[0]['project']} / {provider_rows[0]['provider']}"
+        if provider_rows else "N/A"
+    )
     top_rate = provider_rows[0]["acceptance_vs_shown"] if provider_rows else 0.0
 
     overview = Text()
     overview.append("Commits analyzed: ", style="bold")
     overview.append(str(total_commits), style="cyan")
-    overview.append("\nTop accepted provider: ", style="bold")
-    overview.append(top_provider, style="magenta")
+    overview.append("\nProjects found: ", style="bold")
+    overview.append(str(total_projects), style="cyan")
+    overview.append("\nTop accepted project/provider: ", style="bold")
+    overview.append(top_label, style="magenta")
     overview.append(" (")
     overview.append(format_pct(top_rate), style=get_acceptance_style(top_rate))
     overview.append(" of shown candidates)")
     console.print(Panel(overview, title="History Overview", expand=False))
 
     provider_table = Table(title="Acceptance Relative And Average Time", header_style="bold cyan")
+    provider_table.add_column("Project", style="bold")
     provider_table.add_column("Provider", style="bold")
     provider_table.add_column("Selected", justify="right")
     provider_table.add_column("Shown", justify="right")
@@ -208,6 +242,7 @@ def _render_rich_summary(entries, summary, provider_rows):
 
     for row in provider_rows:
         provider_table.add_row(
+            row["project"],
             row["provider"],
             str(row["selected"]),
             str(row["displayed"]),
@@ -234,24 +269,125 @@ def _render_rich_summary(entries, summary, provider_rows):
 def _render_plain_summary(entries, summary, provider_rows):
     print("History Overview")
     print("================")
+    if RICH_IMPORT_ERROR is not None:
+        print(
+            "Note: Rich is not available in the active environment; "
+            "showing a plain-text table instead."
+        )
+        print(f"Import error: {RICH_IMPORT_ERROR}")
+        print("Tip: run install.bat to install missing dependencies into .venv.")
+        print()
     print(f"Commits analyzed: {summary['total_commits']}")
+    print(f"Projects found: {len(summary['projects'])}")
     if provider_rows:
         print(
-            f"Top accepted provider: {provider_rows[0]['provider']} "
+            f"Top accepted project/provider: {provider_rows[0]['project']} / "
+            f"{provider_rows[0]['provider']} "
             f"({format_pct(provider_rows[0]['acceptance_vs_shown'])} of shown candidates)"
         )
     print()
     print("Acceptance Relative And Average Time")
-    print("Provider | Selected | Shown | Accept/Shown | Accept/Commits | Avg Selected | Avg Shown | Gen | Judge | Refine")
-    for row in provider_rows:
-        print(
-            f"{row['provider']} | {row['selected']} | {row['displayed']} | "
-            f"{format_pct(row['acceptance_vs_shown'])} | "
-            f"{format_pct(row['acceptance_vs_commits'])} | "
-            f"{format_seconds(row['avg_selected'])} | "
-            f"{format_seconds(row['avg_displayed'])} | "
-            f"{row['generator_usage']} | {row['judge_usage']} | {row['refiner_usage']}"
+
+    provider_headers = [
+        "Project",
+        "Provider",
+        "Selected",
+        "Shown",
+        "Accept/Shown",
+        "Accept/Commits",
+        "Avg Selected",
+        "Avg Shown",
+        "Gen",
+        "Judge",
+        "Refine",
+    ]
+    provider_rows_text = [
+        [
+            row["project"],
+            row["provider"],
+            str(row["selected"]),
+            str(row["displayed"]),
+            format_pct(row["acceptance_vs_shown"]),
+            format_pct(row["acceptance_vs_commits"]),
+            format_seconds(row["avg_selected"]),
+            format_seconds(row["avg_displayed"]),
+            str(row["generator_usage"]),
+            str(row["judge_usage"]),
+            str(row["refiner_usage"]),
+        ]
+        for row in provider_rows
+    ]
+    _print_plain_table(provider_headers, provider_rows_text)
+
+    print()
+    print("Selection Position")
+    idx_headers = ["Choice", "Count", "Rate"]
+    idx_rows = [
+        [
+            choice,
+            str(count),
+            format_pct(safe_pct(count, summary["total_commits"])),
+        ]
+        for choice, count in sorted(
+            summary["selected_indexes"].items(), key=lambda item: int(item[0])
         )
+    ]
+    _print_plain_table(idx_headers, idx_rows)
+
+
+def _print_plain_table(headers, rows):
+    if not rows:
+        print("(no data)")
+        return
+
+    terminal_width = shutil.get_terminal_size(fallback=(120, 24)).columns
+    numeric_columns = {
+        idx for idx, header in enumerate(headers)
+        if header not in {"Project", "Provider"}
+    }
+    widths = []
+    for idx, header in enumerate(headers):
+        content_width = max(len(header), *(len(row[idx]) for row in rows))
+        widths.append(content_width)
+
+    separator = "  "
+    minimum_width = sum(widths) + len(separator) * (len(headers) - 1)
+    if minimum_width > terminal_width and widths:
+        overflow = minimum_width - terminal_width
+        text_indexes = [
+            idx for idx, header in enumerate(headers)
+            if header in {"Project", "Provider"}
+        ]
+        for text_idx in text_indexes:
+            if overflow <= 0:
+                break
+            min_width = max(8, len(headers[text_idx]))
+            shrinkable = max(0, widths[text_idx] - min_width)
+            reduction = min(overflow, shrinkable)
+            widths[text_idx] -= reduction
+            overflow -= reduction
+
+    def clip(value, width):
+        if len(value) <= width:
+            return value
+        if width <= 1:
+            return value[:width]
+        return value[: width - 1] + "…"
+
+    def format_row(row):
+        parts = []
+        for idx, value in enumerate(row):
+            cell = clip(value, widths[idx])
+            if idx in numeric_columns:
+                parts.append(cell.rjust(widths[idx]))
+            else:
+                parts.append(cell.ljust(widths[idx]))
+        return separator.join(parts)
+
+    print(format_row(headers))
+    print(separator.join("-" * width for width in widths))
+    for row in rows:
+        print(format_row(row))
 
 
 def main():

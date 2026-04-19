@@ -1,5 +1,4 @@
 @echo off
-setlocal
 
 set "SCRIPT_DIR=%~dp0"
 
@@ -13,12 +12,21 @@ if exist "%SCRIPT_DIR%apis\OpenAI\secret.bat" (
     call "%SCRIPT_DIR%apis\OpenAI\secret.bat"
 )
 
+if exist "%SCRIPT_DIR%apis\Codex\secret.bat" (
+    call :print_info "Setting Keys for Codex Secret File..."
+    call "%SCRIPT_DIR%apis\Codex\secret.bat"
+)
+
+if exist "%SCRIPT_DIR%apis\Claude\secret.bat" (
+    call :print_info "Setting Keys for Claude Secret File..."
+    call "%SCRIPT_DIR%apis\Claude\secret.bat"
+)
+
 if exist "%SCRIPT_DIR%apis\Ollama\secret.bat" (
     call :print_info "Setting Keys for Ollama Secret File..."
     call "%SCRIPT_DIR%apis\Ollama\secret.bat"
 )
 
-endlocal
 exit /b 0
 
 :print_info

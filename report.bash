@@ -8,5 +8,4 @@ if [ ! -f "${SCRIPT_DIR}/config.yml" ]; then
     exit 1
 fi
 
-gcm_source_provider_secrets "${SCRIPT_DIR}" || exit 1
 gcm_run_repo_python "${SCRIPT_DIR}" "report_history.py" "$@"

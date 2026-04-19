@@ -2,7 +2,7 @@
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-for provider in OpenRouter OpenAI Ollama; do
+for provider in OpenRouter OpenAI Codex Claude Ollama; do
     SECRET_FILE="${SCRIPT_DIR}/apis/${provider}/secret.bash"
 
     if [ -f "$SECRET_FILE" ]; then

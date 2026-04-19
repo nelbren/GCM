@@ -20,12 +20,12 @@ if not exist "%SCRIPT_DIR%.venv\Scripts\python.exe" (
     goto :fail
 )
 
-if not exist "%SCRIPT_DIR%secret.bat" (
-    echo ❌ "%SCRIPT_DIR%secret.bat" not found. Abort.
+if not exist "%SCRIPT_DIR%load_secrets.bat" (
+    echo ❌ "%SCRIPT_DIR%load_secrets.bat" not found. Abort.
     goto :fail
 )
 
-call "%SCRIPT_DIR%secret.bat"
+call "%SCRIPT_DIR%load_secrets.bat"
 "%SCRIPT_DIR%.venv\Scripts\python.exe" "%SCRIPT_DIR%gcm.py" %*
 set "EXIT_CODE=%ERRORLEVEL%"
 goto :end

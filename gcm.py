@@ -253,11 +253,21 @@ def save_to_history(message, path):
         safe_print(f"⚠️ Could not save history: {e}")
 
 
+def get_project_metadata():
+    project_path = os.path.abspath(os.getcwd())
+    project_name = os.path.basename(project_path) or project_path
+    return {
+        "name": project_name,
+        "path": project_path,
+    }
+
+
 def create_history_entry(final_message, selected_index, displayed_messages,
                          candidates, selected_candidate, plan, prompt,
                          diff_summary, user_note):
     return {
         "timestamp": datetime.now().isoformat(timespec="milliseconds"),
+        "project": get_project_metadata(),
         "selected_index": selected_index,
         "user_note": user_note,
         "prompt_length": len(prompt or ""),
@@ -372,6 +382,15 @@ if __name__ == "__main__":
     prompt = build_prompt(changes, diff_summary, user_note)
     providers = discover_available_providers(config)
     plan = build_execution_plan(providers, config)
+
+    if plan.generators:
+        generator_names = ", ".join(provider.name for provider in plan.generators)
+        safe_print(f"🤖 Generators selected: {generator_names}")
+    if plan.judge:
+        safe_print(f"⚖️ Using {plan.judge.name} as judge.")
+    if plan.refiner:
+        safe_print(f"✨ Using {plan.refiner.name} as refiner.")
+
     candidates = run_generators(plan.generators, prompt, MAX_CHARACTERS)
 
     if len(candidates) == 0:
@@ -432,8 +451,11 @@ if __name__ == "__main__":
     safe_print("\n📝 Suggested Commit Message:\n")
     for idx, (provider, model, msg, usage, elapsed) in enumerate(messages, 1):
         strIdx = str(idx)
-        cols = columns - len(strIdx) - 4
-        safe_print(f"[ {strIdx} ]{'-' * cols}")
+        option_label = f"[ {strIdx} ] {provider}"
+        if model:
+            option_label = f"{option_label} ({model})"
+        cols = max(columns - len(option_label), 1)
+        safe_print(f"{option_label}{'-' * cols}")
         safe_print(msg)
         if usage:
             safe_print("-" * columns)

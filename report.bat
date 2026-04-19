@@ -20,12 +20,6 @@ if not exist "%SCRIPT_DIR%.venv\Scripts\python.exe" (
     goto :fail
 )
 
-if not exist "%SCRIPT_DIR%secret.bat" (
-    echo ❌ "%SCRIPT_DIR%secret.bat" not found. Abort.
-    goto :fail
-)
-
-call "%SCRIPT_DIR%secret.bat"
 "%SCRIPT_DIR%.venv\Scripts\python.exe" "%SCRIPT_DIR%report_history.py" %*
 set "EXIT_CODE=%ERRORLEVEL%"
 goto :end
