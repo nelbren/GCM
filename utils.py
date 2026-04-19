@@ -25,6 +25,27 @@ CHEAP_EMOJI = '💵'
 ENERGY_EMOJI = '🔌'
 
 
+def _git_safe_directory():
+    return os.path.abspath(os.getcwd()).replace("\\", "/")
+
+
+def git_command(*args):
+    return [
+        "git",
+        "-c",
+        f"safe.directory={_git_safe_directory()}",
+        *args,
+    ]
+
+
+def run_git_command(args, **kwargs):
+    return subprocess.run(git_command(*args), **kwargs)
+
+
+def check_output_git(args, **kwargs):
+    return subprocess.check_output(git_command(*args), **kwargs)
+
+
 def detect_environment(emojis=None):
     emojis = emojis or DEFAULT_EMOJIS
 
@@ -71,8 +92,8 @@ def get_cost(USE_OLLAMA, MODEL_TIER):
 
 def get_commit_count():
     try:
-        result = subprocess.run(
-            ["git", "rev-list", "--count", "HEAD"],
+        result = run_git_command(
+            ["rev-list", "--count", "HEAD"],
             capture_output=True,
             text=True,
             check=True

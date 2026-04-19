@@ -2,8 +2,36 @@ max_tokens: 600
 use_confirmation: true
 save_history: true
 history_path: ~/.gcm_history.log
+history_json_path: ~/.gcm_history.jsonl
+include_location: false
 max_characters: 500
 suggested_messages: 3
+provider_strategy: auto
+generator_count: 3
+enable_judge: true
+enable_refiner: false
+
+providers:
+   ollama:
+      enabled: true
+      priority: 30
+      roles: ["generate"]
+   openrouter:
+      enabled: true
+      priority: 40
+      roles: ["generate"]
+   openai:
+      enabled: true
+      priority: 70
+      roles: ["generate", "judge", "refine"]
+   claude:
+      enabled: true
+      priority: 95
+      roles: ["generate", "judge", "refine"]
+   codex:
+      enabled: true
+      priority: 100
+      roles: ["generate", "judge", "refine"]
 
 emojis:
    header: "🔀"

@@ -4,6 +4,7 @@
 
 import os
 import sys
+import json
 import yaml
 import shutil
 import socket
@@ -11,24 +12,15 @@ import requests
 import subprocess
 from datetime import datetime
 from utils import detect_environment, ENVIRONMENT_EMOJI, \
-                  format_usage, get_commit_count
+                  format_usage, get_commit_count, run_git_command
 from version import load_version_config, update_version_file
-
-from apis.OpenRouter.query_model import query_model as query_openrouter
-from apis.OpenAI.query_model import query_model as query_openai
-from apis.Ollama.query_model import query_model as query_ollama
+from apis.registry import get_available_provider_pairs, discover_available_providers
+from apis.orchestrator import build_execution_plan, run_generators, \
+                              run_judge, run_refiner
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OLLAMA_API_KEY = os.getenv("OLLAMA_API_KEY")
-
-available_apis = []
-if OPENROUTER_API_KEY:
-    available_apis.append(("OpenRouter", query_openrouter))
-if OPENAI_API_KEY:
-    available_apis.append(("OpenAI", query_openai))
-if OLLAMA_API_KEY:
-    available_apis.append(("Ollama", query_ollama))
 
 
 def load_config(path=None):
@@ -55,6 +47,10 @@ SAVE_HISTORY = config.get("save_history", True)
 HISTORY_PATH = os.path.expanduser(
     config.get("history_path", "~/.gcm_history.log")
 )
+HISTORY_JSON_PATH = os.path.expanduser(
+    config.get("history_json_path", "~/.gcm_history.jsonl")
+)
+INCLUDE_LOCATION = config.get("include_location", False)
 MAX_CHARACTERS = config.get("max_characters", 160)
 SUGGESTED_MESSAGES = config.get("suggested_messages", 1)
 
@@ -83,14 +79,18 @@ def is_git_repo():
     return os.path.isdir(".git")
 
 
+def get_available_apis():
+    return get_available_provider_pairs(config)
+
+
 def get_machine_name():
     return socket.gethostname()
 
 
 def get_git_changes():
     try:
-        result = subprocess.run(
-            ["git", "status", "--porcelain"],
+        result = run_git_command(
+            ["status", "--porcelain"],
             capture_output=True,
             text=True,
             check=True
@@ -102,16 +102,27 @@ def get_git_changes():
 
 
 def get_git_diff_summary():
-    try:
-        result = subprocess.run(
-            ["git", "diff", "--shortstat"],
-            capture_output=True,
-            text=True,
-            check=True
-        )
-        return result.stdout.strip()
-    except subprocess.CalledProcessError:
-        return ""
+    summaries = []
+    commands = [
+        ("Staged", ["git", "diff", "--cached", "--shortstat"]),
+        ("Unstaged", ["git", "diff", "--shortstat"]),
+    ]
+
+    for label, command in commands:
+        try:
+            result = subprocess.run(
+                ["git", "-c", f"safe.directory={os.path.abspath(os.getcwd())}", *command[1:]],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            output = result.stdout.strip()
+            if output:
+                summaries.append(f"{label}: {output}")
+        except subprocess.CalledProcessError:
+            continue
+
+    return "\n".join(summaries)
 
 
 def format_file_list(file_list):
@@ -169,8 +180,8 @@ def get_location():
 
 
 def amend_commit_message():
-    subprocess.run(
-        ["git", "commit", "--amend"],
+    run_git_command(
+        ["commit", "--amend"],
         check=True
     )
 
@@ -214,13 +225,20 @@ def build_commit_message(env, emoji, machine, summary,
     commit_count = get_commit_count() + 1
     commit_number_str = f"{commit_count:011,}"
     timestamp_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-    location_str = get_location()
-    commit_id_line = f"🆔: {commit_number_str} " + \
-                     f"| 🕒: {timestamp_str} " + \
-                     f"| 📍: {location_str} " + \
-                     f"| {ENVIRONMENT_EMOJI}: {env} " \
-                     f"| 🤖: {provider} 🧠: {model} " \
-                     f"| ⏱️: {elapsed:.2f} secs"
+    commit_id_parts = [
+        f"🆔: {commit_number_str}",
+        f"🕒: {timestamp_str}",
+    ]
+
+    if INCLUDE_LOCATION:
+        commit_id_parts.append(f"📍: {get_location()}")
+
+    commit_id_parts.extend([
+        f"{ENVIRONMENT_EMOJI}: {env}",
+        f"🤖: {provider} 🧠: {model}",
+        f"⏱️: {elapsed:.2f} secs",
+    ])
+    commit_id_line = " | ".join(commit_id_parts)
 
     lines.append(f"{padding}{commit_id_line}")
 
@@ -235,13 +253,87 @@ def save_to_history(message, path):
         safe_print(f"⚠️ Could not save history: {e}")
 
 
+def create_history_entry(final_message, selected_index, displayed_messages,
+                         candidates, selected_candidate, plan, prompt,
+                         diff_summary, user_note):
+    return {
+        "timestamp": datetime.now().isoformat(timespec="milliseconds"),
+        "selected_index": selected_index,
+        "user_note": user_note,
+        "prompt_length": len(prompt or ""),
+        "diff_summary": diff_summary,
+        "final_message": final_message,
+        "selected_candidate": {
+            "provider": getattr(selected_candidate, "provider", None),
+            "model": getattr(selected_candidate, "model", None),
+            "elapsed": getattr(selected_candidate, "elapsed", None),
+            "content": getattr(selected_candidate, "content", None),
+        } if selected_candidate else None,
+        "plan": {
+            "generators": [provider.name for provider in plan.generators],
+            "judge": plan.judge.name if plan.judge else None,
+            "refiner": plan.refiner.name if plan.refiner else None,
+        },
+        "displayed_messages": [
+            {
+                "index": idx,
+                "provider": provider,
+                "model": model,
+                "elapsed": elapsed,
+                "usage": usage,
+                "message": message,
+            }
+            for idx, (provider, model, message, usage, elapsed)
+            in enumerate(displayed_messages, 1)
+        ],
+        "raw_candidates": [
+            {
+                "provider": candidate.provider,
+                "model": candidate.model,
+                "elapsed": candidate.elapsed,
+                "usage": candidate.usage,
+                "content": candidate.content,
+            }
+            for candidate in candidates
+        ],
+    }
+
+
+def save_history_entry(entry, path):
+    try:
+        with open(os.path.expanduser(path), "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    except Exception as e:
+        safe_print(f"⚠️ Could not save structured history: {e}")
+
+
 def has_staged_changes():
-    result = subprocess.run(
-        ["git", "diff", "--cached", "--name-only"],
+    result = run_git_command(
+        ["diff", "--cached", "--name-only"],
         capture_output=True,
         text=True
     )
     return bool(result.stdout.strip())
+
+
+def confirm_stage_all_changes():
+    if not USE_CONFIRM:
+        safe_print("❌ No changes staged. Stage files explicitly before committing.")
+        sys.exit(1)
+
+    while True:
+        confirm = input(
+            "\n⚠️ No changes are staged. Stage all detected changes with "
+            "'git add .' and continue? (y/n): "
+        ).strip().lower()
+
+        if confirm in {"y", "yes"}:
+            safe_print("ℹ️ Running: git add .")
+            run_git_command(["add", "."], check=True)
+            return
+        if confirm in {"n", "no"}:
+            safe_print("🚫 Commit canceled. Stage the intended files and rerun.")
+            sys.exit(0)
 
 
 if __name__ == "__main__":
@@ -257,8 +349,12 @@ if __name__ == "__main__":
         safe_print("ℹ️ No changes detected. Nothing to do.")
         sys.exit(0)
 
+    available_apis = get_available_apis()
     if not available_apis:
-        safe_print("❌ No AI providers configured. Set OpenAI, OpenRouter, or Ollama credentials first.")
+        safe_print(
+            "❌ No AI providers configured. Set OpenAI, OpenRouter, "
+            "Ollama, Codex, or Claude credentials first."
+        )
         sys.exit(0)
 
     version = update_version_file(version_config)
@@ -274,44 +370,60 @@ if __name__ == "__main__":
     user_note = sys.argv[1] if len(sys.argv) > 1 else "None"
 
     prompt = build_prompt(changes, diff_summary, user_note)
+    providers = discover_available_providers(config)
+    plan = build_execution_plan(providers, config)
+    candidates = run_generators(plan.generators, prompt, MAX_CHARACTERS)
+
+    if len(candidates) == 0:
+        safe_print("\n⚠️ There are no suggested confirmation messages!\n")
+        exit(1)
+
+    selected_candidate = run_judge(
+        plan.judge,
+        prompt,
+        candidates,
+        MAX_CHARACTERS
+    )
+    selected_candidate = run_refiner(
+        plan.refiner,
+        prompt,
+        selected_candidate,
+        MAX_CHARACTERS
+    )
 
     messages = []
-    used_models = set()  # Here we keep track of the control in memory
+    seen = set()
 
-    for i in range(SUGGESTED_MESSAGES):
-        provider, query_fn = available_apis[i % len(available_apis)]
+    ordered_candidates = list(candidates)
+    if selected_candidate:
+        selected_key = (
+            selected_candidate.provider,
+            selected_candidate.model,
+            selected_candidate.content
+        )
+        if selected_key not in {
+            (candidate.provider, candidate.model, candidate.content)
+            for candidate in ordered_candidates
+        }:
+            ordered_candidates.insert(0, selected_candidate)
 
-        # Force OpenRouter if there are fewer
-        # providers than suggestions requested
-        if provider != "OpenRouter" and i >= len(available_apis):
-            provider, query_fn = "OpenRouter", query_openrouter
-
-        attempt = 0
-        max_attempts = 5  # Avoid infinite loop in extreme cases
-
-        while attempt < max_attempts:
-            code, model, response, usage, elapsed = query_fn(prompt)
-            unique_key = f"{provider}:{model}"
-
-            if unique_key in used_models:
-                attempt += 1
-                # This template has already been used, try another one
-                continue
-
-            used_models.add(unique_key)
-
-            if code == 200 and isinstance(response, str):
-                content = response[:MAX_CHARACTERS] \
-                    if MAX_CHARACTERS else response
-                message = build_commit_message(
-                    env, emoji, machine_name, summary,
-                    content, diff_summary,
-                    provider, model, elapsed
-                )
-                messages.append((provider, model, message, usage, elapsed))
-                break  # Success: exit the while
-
-            attempt += 1  # If it failed, try another
+    for candidate in ordered_candidates:
+        unique_key = (candidate.provider, candidate.model, candidate.content)
+        if unique_key in seen:
+            continue
+        seen.add(unique_key)
+        message = build_commit_message(
+            env, emoji, machine_name, summary,
+            candidate.content, diff_summary,
+            candidate.provider, candidate.model, candidate.elapsed
+        )
+        messages.append((
+            candidate.provider,
+            candidate.model,
+            message,
+            candidate.usage,
+            candidate.elapsed
+        ))
 
     if len(messages) == 0:
         safe_print("\n⚠️ There are no suggested confirmation messages!\n")
@@ -330,6 +442,7 @@ if __name__ == "__main__":
 
     if USE_CONFIRM:
         options = len(messages)
+        selected_index = None
         while True:
             confirm = input(
                 f"\n✅ Do you want to use any of these messages "
@@ -342,22 +455,37 @@ if __name__ == "__main__":
                 val = -1
 
             if val >= 1 and val <= options:
+                selected_index = val
                 message = messages[val - 1][2]
                 break
             if val == 0:
                 safe_print("🚫 Commit canceled by user.")
                 sys.exit(0)
+    else:
+        selected_index = 1
+        message = messages[0][2]
 
     if not has_staged_changes():
-        safe_print("ℹ️ No changes staged. Running: git add .")
-        subprocess.run(["git", "add", "."], check=True)
+        confirm_stage_all_changes()
 
     try:
-        subprocess.run(["git", "commit", "-m", message], check=True)
+        run_git_command(["commit", "-m", message], check=True)
         safe_print("✅ Commit successfully completed.")
 
         if SAVE_HISTORY:
             save_to_history(message, HISTORY_PATH)
+            history_entry = create_history_entry(
+                final_message=message,
+                selected_index=selected_index,
+                displayed_messages=messages,
+                candidates=ordered_candidates,
+                selected_candidate=selected_candidate,
+                plan=plan,
+                prompt=prompt,
+                diff_summary=diff_summary,
+                user_note=user_note,
+            )
+            save_history_entry(history_entry, HISTORY_JSON_PATH)
 
     except subprocess.CalledProcessError as e:
         safe_print(f"❌ Error executing git commit: {e}")

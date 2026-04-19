@@ -2,3 +2,4 @@ pyyaml
 requests
 openai
 ollama
+rich

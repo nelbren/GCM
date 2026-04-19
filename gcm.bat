@@ -1,5 +1,8 @@
 @echo off
+setlocal
 
-set SCRIPT_DIR=%~dp0
+set "SCRIPT_DIR=%~dp0"
+call "%SCRIPT_DIR%run.bat" %*
+set "EXIT_CODE=%ERRORLEVEL%"
 
-%SCRIPT_DIR%run.bat
+endlocal & exit /b %EXIT_CODE%

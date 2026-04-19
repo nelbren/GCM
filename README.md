@@ -29,6 +29,15 @@
 - **Token Usage and Execution Time**\
   Displays real-time statistics including token usage (Prompt 📝, Response 💬, Total 🧮) and the time spent on AI response generation ⏱️.
 
+- **Multi-provider Orchestration**\
+  Can combine generators, judges, and refiners across **Ollama**, **OpenRouter**, **OpenAI**, **Codex**, and **Claude**, depending on which credentials are available.
+
+- **Structured History for Quality Analysis**\
+  In addition to the human-readable history log, GCM can persist a JSON Lines audit trail with the selected provider, displayed candidates, judge/refiner roles, and final message.
+
+- **Optional Location Metadata**\
+  Location lookup is disabled by default and can be enabled with `include_location: true` if you want it in the commit footer.
+
 - **Dual Terminal and OS Compatibility**\
   Runs smoothly on **CMD**, **PowerShell**, **Cygwin Bash**, **Git Bash**, **Linux**, and **MacOS** terminals.
 
@@ -75,6 +84,7 @@ GCM/
 2. **Run the Script:** Execute `run.bat` on Windows or `run.bash` on Unix-like systems.
 3. **Review the Suggested Commit:** The AI proposes a message based on your staged or unstaged changes.
 4. **Confirm and Commit:** You have the option to confirm or cancel before the actual commit is made.
+5. **Optional Staging:** If nothing is staged yet, GCM asks before running `git add .`.
 
 - 📸 With Ollama:
   ![](images/003.png)
@@ -88,8 +98,36 @@ max_tokens: 600
 use_confirmation: true
 save_history: true
 history_path: ~/.gcm_history.log
+history_json_path: ~/.gcm_history.jsonl
+include_location: false
 max_characters: 500
 suggested_messages: 3
+provider_strategy: auto
+generator_count: 3
+enable_judge: true
+enable_refiner: false
+
+providers:
+  ollama:
+    enabled: true
+    priority: 30
+    roles: ["generate"]
+  openrouter:
+    enabled: true
+    priority: 40
+    roles: ["generate"]
+  openai:
+    enabled: true
+    priority: 70
+    roles: ["generate", "judge", "refine"]
+  claude:
+    enabled: true
+    priority: 95
+    roles: ["generate", "judge", "refine"]
+  codex:
+    enabled: true
+    priority: 100
+    roles: ["generate", "judge", "refine"]
 
 emojis:
   header: "🔀"
@@ -119,6 +157,8 @@ prompt_template: |
   {diff}
 ```
 
+`history_json_path` stores one JSON object per committed message. This makes it easier to compare acceptance and quality across providers such as `Ollama`, `OpenRouter`, `OpenAI`, `Codex`, and `Claude`.
+
 ---
 
 ## 🛠 Installation
@@ -138,6 +178,8 @@ prompt_template: |
 ## 🌐 Supported Models
 
 - ### 🤖 Ollama: Supports models like 🧠 `llama3`, `gemma`, or any local model served by Ollama.
+
+  - Local Ollama usage does not require an API key. Set `OLLAMA_MODEL` and ensure the Ollama host is reachable.
 
   - #### Environment Variable: `OLLAMA_MODEL`
 
@@ -428,6 +470,26 @@ prompt_template: |
 
 📸 With suggested_messages: 3
 ![](images/006.png)
+
+---
+
+## 📊 History Analytics
+
+If `save_history: true` and `history_json_path` is enabled, you can inspect provider acceptance and average response times with:
+
+```bash
+python report_history.py
+```
+
+The report is designed for terminal usage and uses **Rich** tables with color when the dependency is installed. Recommended reading order:
+
+- `Accept/Shown`: relative acceptance of a provider against the times it was actually shown as a candidate.
+- `Accept/Commits`: overall share of final selected messages across all analyzed commits.
+- `Avg Selected`: average elapsed time when that provider ended up selected.
+- `Avg Shown`: average elapsed time across all displayed messages from that provider.
+- `Gen`, `Judge`, `Refine`: how often the provider was used in each orchestration role.
+
+This gives you a concrete way to compare whether `Codex`, `Claude`, `OpenAI`, `Ollama`, or `OpenRouter` are producing the best tradeoff between quality and latency.
 
 ---
 

@@ -60,6 +60,7 @@ def query_model(prompt):
         return 0, None, None, None, 0
     usage = None
     start_time = time.time()
+    response = None
 
     if MODEL_TIER == "cheap":
         OPENAI_MODEL = "gpt-5-nano"
@@ -115,8 +116,8 @@ def query_model(prompt):
     if code != 200:
         safe_print(f"❌ {code})")
         if DEBUG:
-            safe_print(str(response))
-        return code, model, response, usage, elapsed_time
+            safe_print(str(response) if response is not None else content)
+        return code, model, content, usage, elapsed_time
     else:
         safe_print("✅")
 

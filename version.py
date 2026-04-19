@@ -1,8 +1,8 @@
 import os
 import json
 import yaml
-import subprocess
 from datetime import datetime
+from utils import check_output_git
 
 
 def safe_print(message):
@@ -53,9 +53,10 @@ def update_version_file(config):
 
     if version_mode == "commits":
         try:
-            output = subprocess.check_output(
-                ["git", "rev-list", "--count", "HEAD"],
-                stderr=subprocess.DEVNULL)
+            output = check_output_git(
+                ["rev-list", "--count", "HEAD"],
+                stderr=None
+            )
             commit_count = int(output.decode().strip())
             commit_count += 1
             version = f"{commit_count:011,}"

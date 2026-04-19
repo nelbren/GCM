@@ -26,7 +26,7 @@ if not exist "%SCRIPT_DIR%secret.bat" (
 )
 
 call "%SCRIPT_DIR%secret.bat"
-"%SCRIPT_DIR%.venv\Scripts\python.exe" "%SCRIPT_DIR%gcm.py" %*
+"%SCRIPT_DIR%.venv\Scripts\python.exe" "%SCRIPT_DIR%report_history.py" %*
 set "EXIT_CODE=%ERRORLEVEL%"
 goto :end
 
