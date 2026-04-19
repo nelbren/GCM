@@ -9,6 +9,16 @@ from rich.panel import Panel
 from rich.text import Text
 
 
+TEST_SUMMARY_ROWS = (
+    ("passed", "✅", "Passed", "green"),
+    ("failures", "❌", "Failures", "red"),
+    ("errors", "🚨", "Errors", "red"),
+    ("skipped", "⚠️", "Skipped", "yellow"),
+    ("expected_failures", "🧪", "Expected failures", "yellow"),
+    ("unexpected_successes", "🎉", "Unexpected successes", "yellow"),
+)
+
+
 class RichTestResult(unittest.TextTestResult):
     def __init__(self, stream, descriptions, verbosity, console):
         super().__init__(stream, descriptions, verbosity)
@@ -76,19 +86,58 @@ def build_summary_text(result):
     summary = Text()
     summary.append("Total: ", style="bold")
     summary.append(str(result.testsRun), style="cyan")
-    summary.append("\nPassed: ", style="bold")
-    summary.append(str(len(result.successes)), style="green")
-    summary.append("\nFailures: ", style="bold")
-    summary.append(str(len(result.failures)), style="red")
-    summary.append("\nErrors: ", style="bold")
-    summary.append(str(len(result.errors)), style="red")
-    summary.append("\nSkipped: ", style="bold")
-    summary.append(str(len(result.skipped)), style="yellow")
-    summary.append("\nExpected failures: ", style="bold")
-    summary.append(str(len(result.expectedFailures)), style="yellow")
-    summary.append("\nUnexpected successes: ", style="bold")
-    summary.append(str(len(result.unexpectedSuccesses)), style="yellow")
+    for row in build_summary_rows(result):
+        summary.append("\n")
+        summary.append(row["text"], style=row["style"])
     return summary
+
+
+def get_bar_style(pct):
+    if pct >= 75.0:
+        return "█"
+    if pct >= 50.0:
+        return "▓"
+    if pct >= 25.0:
+        return "▒"
+    return "░"
+
+
+def format_count(value):
+    if value < 1000:
+        return f"{value:03d}"
+    return f"{value:,}"
+
+
+def format_pct(value):
+    return f"{value:.1f}%"
+
+
+def build_summary_rows(result, width=28):
+    total = max(result.testsRun, 0)
+    row_counts = {
+        "passed": len(result.successes),
+        "failures": len(result.failures),
+        "errors": len(result.errors),
+        "skipped": len(result.skipped),
+        "expected_failures": len(result.expectedFailures),
+        "unexpected_successes": len(result.unexpectedSuccesses),
+    }
+    max_count = max(row_counts.values(), default=0)
+
+    rows = []
+    for key, emoji, label, color in TEST_SUMMARY_ROWS:
+        count = row_counts[key]
+        pct = 0.0 if total <= 0 else (count / total) * 100.0
+        filled = 0 if max_count <= 0 or count <= 0 else max(1, round((count / max_count) * width))
+        bar = get_bar_style(pct) * filled
+        rows.append({
+            "text": (
+                f"{emoji} {label:<20} {bar:<{width}} "
+                f"{format_count(count)} ({format_pct(pct)})"
+            ),
+            "style": color,
+        })
+    return rows
 
 
 def print_issue_details(console, result):

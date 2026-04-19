@@ -225,6 +225,7 @@ class GcmTests(unittest.TestCase):
         self.assertEqual(entry["plan"]["generators"], ["OpenAI"])
         self.assertEqual(entry["plan"]["judge"], "Codex")
         self.assertEqual(entry["displayed_messages"][0]["provider"], "Codex")
+        self.assertEqual(entry["os"], "WINDOWS")
         self.assertEqual(entry["outcome"], "committed")
 
     def test_create_history_entry_can_mark_canceled_outcome(self):

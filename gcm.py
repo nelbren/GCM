@@ -387,9 +387,11 @@ def get_project_metadata():
 def create_history_entry(final_message, selected_index, displayed_messages,
                          candidates, selected_candidate, plan, prompt,
                          diff_summary, user_note, outcome="committed"):
+    environment_name, _ = detect_environment(EMOJIS)
     return {
         "timestamp": datetime.now().isoformat(timespec="milliseconds"),
         "outcome": outcome,
+        "os": environment_name,
         "project": get_project_metadata(),
         "selected_index": selected_index,
         "user_note": user_note,
