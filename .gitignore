@@ -8,3 +8,5 @@ apis/*/secret.bat
 
 # API-specific local state files
 apis/OpenRouter/blacklist.txt
+
+config.yml
